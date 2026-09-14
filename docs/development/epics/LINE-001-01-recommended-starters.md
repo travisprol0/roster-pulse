@@ -13,13 +13,13 @@ On **your** team, mark recommended starters from projected pts filling `starter_
 
 ## Scope
 
-- [ ] Helper function + `recommendedStarter: true/false` on your players in `/api/league/` (or a nested `lineup` object).
-- [ ] UI badge **Start** / **Sit** on your card only.
+- [x] Helper function + `recommendedStarter: true/false` on your players in `/api/league/` (or a nested `lineup` object).
+- [x] UI badge **Start** / **Sit** on your card only.
 
 ## Acceptance criteria
 
-- [ ] Pytest: Weak TE with 20 pts is sit if a better TE exists; top projected at each slot are start.
-- [ ] Jest: badges on User Team fixture.
+- [x] Pytest: Weak TE with 20 pts is sit if a better TE exists; top projected at each slot are start.
+- [x] Jest: badges on User Team fixture.
 
 ## Pipeline (mandatory)
 

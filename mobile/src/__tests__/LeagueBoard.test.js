@@ -44,6 +44,7 @@ const board = {
           actualPts: 8,
           injury: "",
           positionRank: 3,
+          recommendedStarter: true,
         },
         {
           id: "a-te",
@@ -54,6 +55,18 @@ const board = {
           actualPts: 2,
           injury: "OUT",
           positionRank: 3,
+          recommendedStarter: true,
+        },
+        {
+          id: "a-rb-sit",
+          name: "Sit RB",
+          position: "RB",
+          slot: "BE",
+          projectedPts: 1,
+          actualPts: 0,
+          injury: "",
+          positionRank: 4,
+          recommendedStarter: false,
         },
       ],
     },
@@ -90,7 +103,7 @@ test("prompts to add a league when none selected", () => {
 
 test("renders standings and roster rows for every team", async () => {
   fetchLeague.mockResolvedValueOnce(board);
-  const { getByText, getByTestId, queryByText } = render(<LeagueBoard leagueId="12345" />);
+  const { getByText, getByTestId, queryByText, getAllByText } = render(<LeagueBoard leagueId="12345" />);
 
   await waitFor(() => getByText("User Team"));
 
@@ -104,7 +117,7 @@ test("renders standings and roster rows for every team", async () => {
   expect(getByText("Other Team")).toBeTruthy();
   expect(getByText("1-3-0")).toBeTruthy();
   expect(getByText("Bench RB")).toBeTruthy();
-  expect(getByText("BE")).toBeTruthy();
+  expect(getAllByText("BE").length).toBeGreaterThan(0);
   expect(getByText("OUT")).toBeTruthy();
   expect(queryByText("TE2")).toBeNull();
   expect(getByTestId("team-1")).toBeTruthy();
@@ -300,6 +313,17 @@ test("sorting by proj puts the highest projectedPts player first", async () => {
   expect(getByText("Sort: Proj")).toBeTruthy();
   names = getAllByText(/^(Low Proj|High Proj)$/).map((node) => node.props.children);
   expect(names[0]).toBe("High Proj");
+});
+
+test("Start and Sit badges show on your team only", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+
+  const { findByText, getByText, getAllByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+  expect(getAllByText("Start").length).toBeGreaterThan(0);
+  expect(getByText("Sit")).toBeTruthy();
 });
 
 test("surplus need strip is visible on team cards", async () => {

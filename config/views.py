@@ -3,6 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from engine.lineup import recommended_starter_ids
 from engine.trade import find_trades, score_trade
 from espn.client import EspnFantasyClient, EspnUnauthorizedError
 from espn.normalize import starter_slots, user_team
@@ -115,8 +116,8 @@ def _position_ranks(teams):
     return ranks
 
 
-def _serialize_player(player, ranks):
-    return {
+def _serialize_player(player, ranks, starter_ids=None):
+    data = {
         "id": player.get("id"),
         "name": player.get("name") or "",
         "position": player.get("position") or "",
@@ -126,6 +127,9 @@ def _serialize_player(player, ranks):
         "injury": player.get("injury") or "",
         "positionRank": ranks.get(player.get("id")),
     }
+    if starter_ids is not None:
+        data["recommendedStarter"] = player.get("id") in starter_ids
+    return data
 
 
 def _median(values):
@@ -165,7 +169,7 @@ def _surplus_need(teams, slots):
     return tags_by_id
 
 
-def _serialize_team(team, you_id, ranks, surplus_need=None):
+def _serialize_team(team, you_id, ranks, surplus_need=None, starter_ids=None):
     record = team.get("record") or {}
     return {
         "id": team.get("id"),
@@ -181,7 +185,10 @@ def _serialize_team(team, you_id, ranks, surplus_need=None):
         "playoffSeed": team.get("playoffSeed"),
         "waiverRank": team.get("waiverRank"),
         "surplusNeed": surplus_need or [],
-        "players": [_serialize_player(player, ranks) for player in team.get("players") or []],
+        "players": [
+            _serialize_player(player, ranks, starter_ids)
+            for player in team.get("players") or []
+        ],
     }
 
 
@@ -203,8 +210,15 @@ def league(request):
     ).first()
     slots = starter_slots(settings.roster_sizes if settings else {})
     surplus = _surplus_need(snapshot.teams, slots)
+    you_ids = recommended_starter_ids(mine.get("players") or [], slots) if mine else None
     teams = [
-        _serialize_team(team, you_id, ranks, surplus.get(team.get("id")))
+        _serialize_team(
+            team,
+            you_id,
+            ranks,
+            surplus.get(team.get("id")),
+            you_ids if team.get("id") == you_id else None,
+        )
         for team in snapshot.teams
     ]
     teams.sort(

@@ -22,10 +22,10 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | **USE-001** | 5 | 0 | 0 | 5 |
 | **TRADE-001** | 4 | 0 | 0 | 4 |
 | **BOARD-001** | 4 | 0 | 0 | 4 |
-| **LINE-001** | 0 | 0 | 2 | 2 |
+| **LINE-001** | 1 | 0 | 1 | 2 |
 | **SYNC-001** | 0 | 0 | 3 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 13 | 0 | 7 | 20 |
+| **All tickets** | 14 | 0 | 6 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -77,7 +77,7 @@ Source: [LINE-001-lineup-helper.md](LINE-001-lineup-helper.md)
 
 | Status | ID | Title | Notes |
 | ------ | -- | ----- | ----- |
-| Not started | LINE-001-01 | Recommended starters | — |
+| Done | LINE-001-01 | Recommended starters | `recommendedStarter` on your players; Start/Sit badges. |
 | Not started | LINE-001-02 | Injury in starter slot | — |
 
 ---

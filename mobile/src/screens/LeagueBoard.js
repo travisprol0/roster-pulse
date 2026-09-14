@@ -31,7 +31,15 @@ function PlayerHeader() {
   );
 }
 
-function PlayerRow({ player, onPress }) {
+function PlayerRow({ player, onPress, showLineup }) {
+  let lineup = null;
+  if (showLineup && typeof player.recommendedStarter === "boolean") {
+    lineup = (
+      <Text testID={player.recommendedStarter ? "lineup-start" : "lineup-sit"} style={styles.cellLineup}>
+        {player.recommendedStarter ? "Start" : "Sit"}
+      </Text>
+    );
+  }
   return (
     <Pressable onPress={onPress} style={styles.playerRow}>
       <Text style={styles.cellSlot}>{player.slot}</Text>
@@ -39,6 +47,7 @@ function PlayerRow({ player, onPress }) {
       <Text style={styles.cellName} onPress={onPress}>
         {player.name}
       </Text>
+      {lineup}
       <Text style={styles.cellNum}>{player.projectedPts}</Text>
       <Text style={styles.cellNum}>{player.actualPts}</Text>
       <Text style={styles.cellNum}>{player.positionRank}</Text>
@@ -124,6 +133,7 @@ function TeamCard({ team, onPlayerPress, forceExpanded }) {
             <PlayerRow
               key={String(player.id)}
               player={player}
+              showLineup={team.isYou}
               onPress={() => onPlayerPress(player, team.isYou)}
             />
           ))}
@@ -331,6 +341,10 @@ const styles = StyleSheet.create({
   },
   cellName: {
     width: 160,
+  },
+  cellLineup: {
+    width: 48,
+    fontWeight: "700",
   },
   cellNum: {
     width: 72,

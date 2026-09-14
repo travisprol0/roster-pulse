@@ -242,9 +242,16 @@ def test_league_endpoint_returns_board(client):
     assert bench["projectedPts"] == 90
     assert bench["actualPts"] == 8
     assert bench["positionRank"] == 3
+    assert bench["recommendedStarter"] is False
     weak_te = next(p for p in yours["players"] if p["name"] == "Weak TE")
     assert weak_te["injury"] == "OUT"
     assert weak_te["positionRank"] == 3
+    assert weak_te["recommendedStarter"] is True
+    rb1 = next(p for p in yours["players"] if p["name"] == "RB1")
+    assert rb1["recommendedStarter"] is True
+    other = body["teams"][1]
+    assert other["isYou"] is False
+    assert "recommendedStarter" not in other["players"][0]
     other = body["teams"][1]
     assert other["isYou"] is False
     assert other["playoffSeed"] == 8
