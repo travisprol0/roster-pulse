@@ -1,13 +1,24 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function LeagueSwitcher({ leagues, onSelect }) {
+export default function LeagueSwitcher({ leagues, onSelect, selectedId }) {
   return (
     <View testID="league-switcher" style={styles.row}>
-      {leagues.map((league) => (
-        <Pressable key={league.id} onPress={() => onSelect(league.id)}>
-          <Text>{league.name}</Text>
-        </Pressable>
-      ))}
+      {leagues.map((league) => {
+        const selected = league.id === selectedId;
+        return (
+          <Pressable
+            key={league.id}
+            testID={`league-tab-${league.id}`}
+            accessibilityState={{ selected }}
+            onPress={() => onSelect(league.id)}
+            style={[styles.tab, selected && styles.tabSelected]}
+          >
+            <Text style={[styles.tabText, selected && styles.tabTextSelected]}>
+              {league.name}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -15,7 +26,24 @@ export default function LeagueSwitcher({ leagues, onSelect }) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    gap: 16,
-    padding: 12,
+    flexWrap: "wrap",
+    gap: 8,
+    paddingBottom: 12,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: "#e4e4e7",
+  },
+  tabSelected: {
+    backgroundColor: "#18181b",
+  },
+  tabText: {
+    color: "#18181b",
+    fontWeight: "600",
+  },
+  tabTextSelected: {
+    color: "#fafafa",
   },
 });

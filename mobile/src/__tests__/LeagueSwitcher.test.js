@@ -7,14 +7,11 @@ const leagues = [
   { id: "222", name: "League B" },
 ];
 
-test("shows leagues and selects by id without cookies", () => {
+test("pressing League B selects by id and marks it selected", () => {
   const onSelect = jest.fn();
-  const { getByText } = render(
-    <LeagueSwitcher leagues={leagues} onSelect={onSelect} />
+  const { getByText, getByTestId, rerender } = render(
+    <LeagueSwitcher leagues={leagues} onSelect={onSelect} selectedId="111" />
   );
-
-  expect(getByText("League A")).toBeTruthy();
-  expect(getByText("League B")).toBeTruthy();
 
   fireEvent.press(getByText("League B"));
 
@@ -22,4 +19,14 @@ test("shows leagues and selects by id without cookies", () => {
   expect(onSelect).toHaveBeenCalledWith("222");
   expect(onSelect.mock.calls[0][0]).not.toHaveProperty("espn_s2");
   expect(onSelect.mock.calls[0][0]).not.toHaveProperty("swid");
+
+  rerender(
+    <LeagueSwitcher leagues={leagues} onSelect={onSelect} selectedId="222" />
+  );
+  expect(getByTestId("league-tab-222").props.accessibilityState.selected).toBe(
+    true
+  );
+  expect(getByTestId("league-tab-111").props.accessibilityState.selected).toBe(
+    false
+  );
 });

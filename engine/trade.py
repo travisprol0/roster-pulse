@@ -33,9 +33,41 @@ def _apply_trade(roster, sending, receiving):
     return kept + list(receiving)
 
 
-def simulate_trade(team_a, team_b, send_a, send_b, scoring, slots):
+def evaluate_trade(team_a, team_b, send_a, send_b, scoring, slots):
     before_a = starting_ros(team_a, scoring, slots)
     before_b = starting_ros(team_b, scoring, slots)
     after_a = starting_ros(_apply_trade(team_a, send_a, send_b), scoring, slots)
     after_b = starting_ros(_apply_trade(team_b, send_b, send_a), scoring, slots)
-    return after_a > before_a and after_b > before_b
+    if after_a > before_a and after_b > before_b:
+        return {
+            "team_a_delta": after_a - before_a,
+            "team_b_delta": after_b - before_b,
+        }
+    return None
+
+
+def simulate_trade(team_a, team_b, send_a, send_b, scoring, slots):
+    return evaluate_trade(team_a, team_b, send_a, send_b, scoring, slots) is not None
+
+
+def find_trades(user_roster, other_teams, scoring, slots, limit=20):
+    results = []
+    for team in other_teams:
+        others = team["players"] if isinstance(team, dict) and "players" in team else team
+        for player_a in user_roster:
+            for player_b in others:
+                result = evaluate_trade(
+                    user_roster, others, [player_a], [player_b], scoring, slots
+                )
+                if result:
+                    results.append(
+                        {
+                            "id": f"{player_a['id']}-{player_b['id']}",
+                            "send": player_a["name"],
+                            "receive": player_b["name"],
+                            "teamADelta": result["team_a_delta"],
+                            "teamBDelta": result["team_b_delta"],
+                        }
+                    )
+    results.sort(key=lambda trade: min(trade["teamADelta"], trade["teamBDelta"]), reverse=True)
+    return results[:limit]

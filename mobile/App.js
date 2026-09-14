@@ -1,30 +1,110 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { fetchLeagues } from "./src/api/leagues";
+import { isDesktopWidth } from "./src/layout";
+import LeagueBoard from "./src/screens/LeagueBoard";
 import LeagueSwitcher from "./src/screens/LeagueSwitcher";
+import SettingsScreen from "./src/screens/SettingsScreen";
 import TradeDashboard from "./src/screens/TradeDashboard";
-
-const LEAGUES = [
-  { id: "111", name: "League A" },
-  { id: "222", name: "League B" },
-];
+import { useWindowWidth } from "./src/useWindowWidth";
 
 export default function App() {
-  const [leagueId, setLeagueId] = useState(LEAGUES[0].id);
+  const width = useWindowWidth();
+  const desktop = isDesktopWidth(width);
+  const [leagues, setLeagues] = useState([]);
+  const [leagueId, setLeagueId] = useState(null);
+
+  function loadLeagues() {
+    return fetchLeagues().then((data) => {
+      const next = data.leagues || [];
+      setLeagues(next);
+      setLeagueId((current) => {
+        if (current && next.some((league) => league.id === current)) {
+          return current;
+        }
+        return next[0] ? next[0].id : null;
+      });
+    });
+  }
+
+  useEffect(() => {
+    loadLeagues();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <LeagueSwitcher leagues={LEAGUES} onSelect={setLeagueId} />
-      <TradeDashboard leagueId={leagueId} />
+    <ScrollView
+      testID="app-scroll"
+      style={styles.page}
+      contentContainerStyle={styles.inner}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={styles.title}>Roster Pulse</Text>
+      <Text style={styles.subtitle}>
+        League intel and mutually beneficial 1-for-1 trades from your ESPN roster.
+      </Text>
+      <View
+        testID="app-layout"
+        style={[styles.layout, desktop ? styles.layoutWide : styles.layoutNarrow]}
+      >
+        <View style={desktop ? styles.sidebar : styles.stackSection}>
+          <SettingsScreen onSaved={loadLeagues} />
+        </View>
+        <View style={desktop ? styles.main : styles.stackSection}>
+          <LeagueSwitcher
+            leagues={leagues}
+            selectedId={leagueId}
+            onSelect={setLeagueId}
+          />
+          <LeagueBoard leagueId={leagueId} />
+          <TradeDashboard leagueId={leagueId} />
+        </View>
+      </View>
       <StatusBar style="auto" />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  page: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f4f4f5",
+  },
+  inner: {
+    width: "100%",
+    maxWidth: 1200,
+    alignSelf: "center",
+    padding: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#52525b",
+    marginBottom: 16,
+  },
+  layout: {
+    gap: 16,
+  },
+  layoutWide: {
+    flexDirection: "row",
+  },
+  layoutNarrow: {
+    flexDirection: "column",
+  },
+  sidebar: {
+    width: 360,
+    flexShrink: 0,
+  },
+  main: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stackSection: {
+    width: "100%",
   },
 });

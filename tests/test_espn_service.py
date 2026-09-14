@@ -69,3 +69,15 @@ def test_deserializes_mroster_json_to_dict(mock_get):
     assert isinstance(result, dict)
     assert result == ROSTER_PAYLOAD
     assert mock_get.call_args.kwargs["params"]["view"] == "mRoster"
+
+
+@patch("espn.client.requests.get")
+def test_deserializes_mteam_json_to_dict(mock_get):
+    payload = {"teams": [{"id": 1, "record": {"overall": {"wins": 3}}}]}
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = payload
+
+    result = _client().fetch_team()
+
+    assert result == payload
+    assert mock_get.call_args.kwargs["params"]["view"] == "mTeam"
