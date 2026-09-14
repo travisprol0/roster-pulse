@@ -335,3 +335,15 @@ test("surplus need strip is visible on team cards", async () => {
   expect(getByText("RB+")).toBeTruthy();
   expect(getByText("RB-")).toBeTruthy();
 });
+
+test("injured starter row is marked and healthy row is not", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+
+  const { findByText, getByTestId, queryByTestId } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Weak TE")).toBeTruthy();
+  expect(getByTestId("injury-starter-a-te")).toBeTruthy();
+  expect(queryByTestId("injury-starter-a-rb3")).toBeNull();
+  expect(queryByTestId("injury-starter-a-rb-sit")).toBeNull();
+});

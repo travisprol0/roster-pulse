@@ -31,6 +31,20 @@ function PlayerHeader() {
   );
 }
 
+function isInjuredStarter(player) {
+  const injury = (player.injury || "").toUpperCase();
+  const slot = player.slot || "";
+  if (!injury || slot === "BE" || slot === "IR") {
+    return false;
+  }
+  return (
+    injury === "OUT" ||
+    injury === "QUESTIONABLE" ||
+    injury === "DOUBTFUL" ||
+    injury === "IR"
+  );
+}
+
 function PlayerRow({ player, onPress, showLineup }) {
   let lineup = null;
   if (showLineup && typeof player.recommendedStarter === "boolean") {
@@ -40,8 +54,13 @@ function PlayerRow({ player, onPress, showLineup }) {
       </Text>
     );
   }
+  const injuredStarter = isInjuredStarter(player);
   return (
-    <Pressable onPress={onPress} style={styles.playerRow}>
+    <Pressable
+      testID={injuredStarter ? `injury-starter-${player.id}` : undefined}
+      onPress={onPress}
+      style={[styles.playerRow, injuredStarter && styles.injuredStarter]}
+    >
       <Text style={styles.cellSlot}>{player.slot}</Text>
       <Text style={styles.cellPos}>{player.position}</Text>
       <Text style={styles.cellName} onPress={onPress}>
@@ -325,6 +344,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e4e4e7",
     minWidth: 640,
+  },
+  injuredStarter: {
+    backgroundColor: "#fecaca",
   },
   playerHeader: {
     backgroundColor: "#f4f4f5",

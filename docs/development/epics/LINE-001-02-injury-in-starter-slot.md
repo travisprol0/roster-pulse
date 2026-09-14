@@ -13,12 +13,12 @@ If a player has a non-empty `injury` and is in a starter-like slot (not BE/IR), 
 
 ## Scope
 
-- [ ] Visual treatment (background or **OUT** already shown—add row-level emphasis).
-- [ ] Treat QUESTIONABLE/OUT/DOUBTFUL/IR as injury; empty string is healthy.
+- [x] Visual treatment (background or **OUT** already shown—add row-level emphasis).
+- [x] Treat QUESTIONABLE/OUT/DOUBTFUL/IR as injury; empty string is healthy.
 
 ## Acceptance criteria
 
-- [ ] Jest: Weak TE `OUT` row has a testID or style marker; healthy row does not.
+- [x] Jest: Weak TE `OUT` row has a testID or style marker; healthy row does not.
 
 ## Pipeline (mandatory)
 
