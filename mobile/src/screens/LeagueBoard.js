@@ -3,9 +3,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague } from "../api/league";
+import { copyText } from "../clipboard";
 
 function formatDelta(delta) {
   return delta > 0 ? `+${delta}` : `${delta}`;
+}
+
+function pitchText(trade) {
+  return `Send ${trade.send} to ${trade.teamBName} for ${trade.receive}. Your delta ${trade.teamADelta}, their delta ${trade.teamBDelta}.`;
 }
 
 function recordText(record) {
@@ -55,6 +60,9 @@ function Workshop({ trade, onClear }) {
       <Text>{trade.afterA}</Text>
       <Text>{trade.beforeB}</Text>
       <Text>{trade.afterB}</Text>
+      <Pressable onPress={() => copyText(pitchText(trade))}>
+        <Text onPress={() => copyText(pitchText(trade))}>Copy pitch</Text>
+      </Pressable>
       <Pressable onPress={onClear}>
         <Text onPress={onClear}>Clear selection</Text>
       </Pressable>

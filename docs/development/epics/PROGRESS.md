@@ -19,13 +19,13 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 
 | Track | Done | In progress | Not started | Total |
 | ----- | ---- | ----------- | ----------- | ----- |
-| **USE-001** | 3 | 0 | 2 | 5 |
+| **USE-001** | 4 | 0 | 1 | 5 |
 | **TRADE-001** | 0 | 0 | 4 | 4 |
 | **BOARD-001** | 0 | 0 | 4 | 4 |
 | **LINE-001** | 0 | 0 | 2 | 2 |
 | **SYNC-001** | 0 | 0 | 3 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 3 | 0 | 17 | 20 |
+| **All tickets** | 4 | 0 | 16 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -40,7 +40,7 @@ Source: [USE-001-usable-after-load.md](USE-001-usable-after-load.md)
 | Done | USE-001-01 | Product contract | Docs-only; Locked architecture in USE-001. No JSON/UI. |
 | Done | USE-001-02 | Trade detail sheet | `find_trades` JSON + Workshop sheet; locked camelCase ids/totals. |
 | Done | USE-001-03 | Custom 1-for-1 evaluate | `GET /api/evaluate/` + Board pair → Workshop; `score_trade` always returns deltas. |
-| Not started | USE-001-04 | Copy pitch | — |
+| Done | USE-001-04 | Copy pitch | UI-only on 02/03 Workshop JSON; `copyText` + navigator.clipboard. |
 | Not started | USE-001-05 | Settings recede after sync | — |
 
 ---

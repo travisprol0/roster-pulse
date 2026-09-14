@@ -1,11 +1,20 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
+import { copyText } from "../clipboard";
 import { fetchTrades } from "../api/trades";
 import TradeDashboard from "../screens/TradeDashboard";
 
 jest.mock("../api/trades", () => ({
   fetchTrades: jest.fn(),
 }));
+
+jest.mock(
+  "../clipboard",
+  () => ({
+    copyText: jest.fn(() => Promise.resolve()),
+  }),
+  { virtual: true }
+);
 
 const mockResponse = {
   trades: [
@@ -109,4 +118,22 @@ test("dismissing the Workshop returns to the suggested trade list", async () => 
   expect(queryByText("Workshop")).toBeNull();
   expect(getByText("You send")).toBeTruthy();
   expect(getByText("Bench RB")).toBeTruthy();
+});
+
+test("Copy pitch copies names, counterpart team, and deltas without cookies", async () => {
+  fetchTrades.mockResolvedValue(mockResponse);
+
+  const { findByText, getByText } = render(<TradeDashboard leagueId="111" />);
+  fireEvent.press(await findByText("Bench RB"));
+  fireEvent.press(getByText("Copy pitch"));
+
+  expect(copyText).toHaveBeenCalled();
+  const pitch = copyText.mock.calls[0][0];
+  expect(pitch).toContain("Bench RB");
+  expect(pitch).toContain("TE2");
+  expect(pitch).toContain("Other Team");
+  expect(pitch).toContain("4.2");
+  expect(pitch).toContain("3.1");
+  expect(pitch).not.toMatch(/espn_s2/i);
+  expect(pitch).not.toMatch(/SWID/i);
 });

@@ -2,9 +2,14 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fetchTrades } from "../api/trades";
+import { copyText } from "../clipboard";
 
 function formatDelta(delta) {
   return delta > 0 ? `+${delta}` : `${delta}`;
+}
+
+function pitchText(trade) {
+  return `Send ${trade.send} to ${trade.teamBName} for ${trade.receive}. Your delta ${trade.teamADelta}, their delta ${trade.teamBDelta}.`;
 }
 
 function Header() {
@@ -31,6 +36,9 @@ function Workshop({ trade, onDismiss }) {
       <Text>{trade.afterA}</Text>
       <Text>{trade.beforeB}</Text>
       <Text>{trade.afterB}</Text>
+      <Pressable onPress={() => copyText(pitchText(trade))}>
+        <Text onPress={() => copyText(pitchText(trade))}>Copy pitch</Text>
+      </Pressable>
       <Pressable onPress={onDismiss}>
         <Text onPress={onDismiss}>Dismiss</Text>
       </Pressable>

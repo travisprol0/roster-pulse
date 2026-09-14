@@ -13,14 +13,14 @@ From a trade detail, copy a plain-language pitch for league chat. No ESPN write.
 
 ## Scope
 
-- [ ] Button **Copy pitch** on the detail sheet.
-- [ ] Text includes both player names, counterpart team, and both deltas (one sentence or short paragraph).
-- [ ] Web: `Clipboard`; native: `expo-clipboard` only if already a dependency—otherwise web-first `navigator.clipboard` behind a small helper.
+- [x] Button **Copy pitch** on the detail sheet.
+- [x] Text includes both player names, counterpart team, and both deltas (one sentence or short paragraph).
+- [x] Web: `Clipboard`; native: `expo-clipboard` only if already a dependency—otherwise web-first `navigator.clipboard` behind a small helper.
 
 ## Acceptance criteria
 
-- [ ] Jest: press Copy pitch (mock clipboard); expected string contains send/receive names.
-- [ ] Pitch does not include espn_s2 / SWID.
+- [x] Jest: press Copy pitch (mock clipboard); expected string contains send/receive names.
+- [x] Pitch does not include espn_s2 / SWID.
 
 ## Pipeline (mandatory)
 

@@ -2,16 +2,21 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague } from "../api/league";
+import { copyText } from "../clipboard";
 import LeagueBoard from "../screens/LeagueBoard";
 
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(() => Promise.resolve({ youTeamId: null, teams: [] })),
 }));
 
+jest.mock("../api/evaluate", () => ({
+  fetchEvaluate: jest.fn(),
+}));
+
 jest.mock(
-  "../api/evaluate",
+  "../clipboard",
   () => ({
-    fetchEvaluate: jest.fn(),
+    copyText: jest.fn(() => Promise.resolve()),
   }),
   { virtual: true }
 );
@@ -178,4 +183,28 @@ test("Clear selection dismisses the Workshop", async () => {
   expect(queryByText("Workshop")).toBeNull();
   expect(getByText("Bench RB")).toBeTruthy();
   expect(getByText("TE2")).toBeTruthy();
+});
+
+test("Copy pitch copies names, counterpart team, and deltas without cookies", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
+
+  const { getByText, findByText } = render(<LeagueBoard leagueId="12345" />);
+  await waitFor(() => getByText("Bench RB"));
+
+  fireEvent.press(getByText("Bench RB"));
+  fireEvent.press(getByText("TE2"));
+  expect(await findByText("Workshop")).toBeTruthy();
+
+  fireEvent.press(getByText("Copy pitch"));
+
+  expect(copyText).toHaveBeenCalled();
+  const pitch = copyText.mock.calls[0][0];
+  expect(pitch).toContain("Bench RB");
+  expect(pitch).toContain("TE2");
+  expect(pitch).toContain("Other Team");
+  expect(pitch).toContain("4.2");
+  expect(pitch).toContain("3.1");
+  expect(pitch).not.toMatch(/espn_s2/i);
+  expect(pitch).not.toMatch(/SWID/i);
 });
