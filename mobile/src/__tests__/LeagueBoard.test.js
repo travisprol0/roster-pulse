@@ -33,6 +33,7 @@ const board = {
       pointsAgainst: 380.1,
       playoffSeed: 2,
       waiverRank: 5,
+      surplusNeed: ["RB+", "TE-"],
       players: [
         {
           id: "a-rb3",
@@ -65,6 +66,7 @@ const board = {
       pointsAgainst: 400,
       playoffSeed: 8,
       waiverRank: 2,
+      surplusNeed: ["RB-", "TE+"],
       players: [
         {
           id: "b-te2",
@@ -298,4 +300,14 @@ test("sorting by proj puts the highest projectedPts player first", async () => {
   expect(getByText("Sort: Proj")).toBeTruthy();
   names = getAllByText(/^(Low Proj|High Proj)$/).map((node) => node.props.children);
   expect(names[0]).toBe("High Proj");
+});
+
+test("surplus need strip is visible on team cards", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+
+  const { findByText, getByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("TE-")).toBeTruthy();
+  expect(getByText("TE+")).toBeTruthy();
+  expect(getByText("RB+")).toBeTruthy();
+  expect(getByText("RB-")).toBeTruthy();
 });

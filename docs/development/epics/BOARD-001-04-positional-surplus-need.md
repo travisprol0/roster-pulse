@@ -13,14 +13,16 @@ Each team shows a short strip: positions that are surplus vs need vs league, usi
 
 ## Scope
 
-- [ ] Document formula in this ticket when implementing (e.g. sum of top-N `projectedPts` at RB vs league median of that sum).
-- [ ] Strip on the team header: e.g. `RB+` / `TE-`.
-- [ ] Prefer compute in `GET /api/league/` so mobile stays dumb.
+- [x] Document formula in this ticket when implementing (e.g. sum of top-N `projectedPts` at RB vs league median of that sum).
+- [x] Strip on the team header: e.g. `RB+` / `TE-`.
+- [x] Prefer compute in `GET /api/league/` so mobile stays dumb.
+
+Formula: for each `starter_slots` position, sum of that team’s top-N `projectedPts` vs the league median of those sums (even count: mean of the two middle values). `score > median` → `POS+`; `score < median` → `POS-`; equal omitted. JSON field `surplusNeed`.
 
 ## Acceptance criteria
 
-- [ ] Pytest: seeded User Team (weak TE, extra RB) vs Other Team shows TE need on you and TE surplus on them (or the inverse matching the fixture).
-- [ ] Jest: strip text visible on the card.
+- [x] Pytest: seeded User Team (weak TE, extra RB) vs Other Team shows TE need on you and TE surplus on them (or the inverse matching the fixture).
+- [x] Jest: strip text visible on the card.
 
 ## Pipeline (mandatory)
 

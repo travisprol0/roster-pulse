@@ -128,7 +128,44 @@ def _serialize_player(player, ranks):
     }
 
 
-def _serialize_team(team, you_id, ranks):
+def _median(values):
+    if not values:
+        return 0
+    ordered = sorted(values)
+    n = len(ordered)
+    mid = n // 2
+    if n % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def _position_score(players, position, depth):
+    pts = sorted(
+        (_projected(player) for player in players if player.get("position") == position),
+        reverse=True,
+    )
+    return sum(pts[:depth])
+
+
+def _surplus_need(teams, slots):
+    tags_by_id = {}
+    for team in teams:
+        tags = []
+        for position, depth in slots.items():
+            scores = [
+                _position_score(other.get("players") or [], position, depth) for other in teams
+            ]
+            score = _position_score(team.get("players") or [], position, depth)
+            median = _median(scores)
+            if score > median:
+                tags.append(f"{position}+")
+            elif score < median:
+                tags.append(f"{position}-")
+        tags_by_id[team.get("id")] = tags
+    return tags_by_id
+
+
+def _serialize_team(team, you_id, ranks, surplus_need=None):
     record = team.get("record") or {}
     return {
         "id": team.get("id"),
@@ -143,6 +180,7 @@ def _serialize_team(team, you_id, ranks):
         "pointsAgainst": team.get("pointsAgainst") or 0,
         "playoffSeed": team.get("playoffSeed"),
         "waiverRank": team.get("waiverRank"),
+        "surplusNeed": surplus_need or [],
         "players": [_serialize_player(player, ranks) for player in team.get("players") or []],
     }
 
@@ -160,7 +198,15 @@ def league(request):
     mine = user_team(snapshot.teams, snapshot.account.swid)
     you_id = mine.get("id") if mine else None
     ranks = _position_ranks(snapshot.teams)
-    teams = [_serialize_team(team, you_id, ranks) for team in snapshot.teams]
+    settings = LeagueSettings.objects.filter(
+        espn_league_id=int(league_id), season=snapshot.season
+    ).first()
+    slots = starter_slots(settings.roster_sizes if settings else {})
+    surplus = _surplus_need(snapshot.teams, slots)
+    teams = [
+        _serialize_team(team, you_id, ranks, surplus.get(team.get("id")))
+        for team in snapshot.teams
+    ]
     teams.sort(
         key=lambda team: (
             not team["isYou"],

@@ -110,6 +110,13 @@ function TeamCard({ team, onPlayerPress, forceExpanded }) {
         {team.playoffSeed != null ? <Text style={styles.meta}>Seed {team.playoffSeed}</Text> : null}
         {team.waiverRank != null ? <Text style={styles.meta}>Waivers {team.waiverRank}</Text> : null}
       </View>
+      <View style={styles.standings}>
+        {(team.surplusNeed || []).map((tag) => (
+          <Text key={tag} style={styles.meta}>
+            {tag}
+          </Text>
+        ))}
+      </View>
       {showRoster ? (
         <View style={styles.table}>
           <PlayerHeader />

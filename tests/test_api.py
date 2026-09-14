@@ -248,6 +248,11 @@ def test_league_endpoint_returns_board(client):
     other = body["teams"][1]
     assert other["isYou"] is False
     assert other["playoffSeed"] == 8
+    # top-N projectedPts vs league median of those sums (even count: mean of two middle)
+    assert "TE-" in yours["surplusNeed"]
+    assert "RB+" in yours["surplusNeed"]
+    assert "TE+" in other["surplusNeed"]
+    assert "RB-" in other["surplusNeed"]
 
 
 @pytest.mark.django_db
