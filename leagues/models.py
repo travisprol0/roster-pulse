@@ -1,7 +1,17 @@
 from django.db import models
 
 
+class EspnAccount(models.Model):
+    espn_s2 = models.TextField()
+    swid = models.CharField(max_length=64)
+
+
 class LeagueSettings(models.Model):
+    account = models.ForeignKey(
+        EspnAccount,
+        on_delete=models.CASCADE,
+        related_name="league_settings",
+    )
     espn_league_id = models.PositiveBigIntegerField()
     season = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=255)
@@ -19,6 +29,11 @@ class LeagueSettings(models.Model):
 
 
 class RosterSnapshot(models.Model):
+    account = models.ForeignKey(
+        EspnAccount,
+        on_delete=models.CASCADE,
+        related_name="roster_snapshots",
+    )
     espn_league_id = models.PositiveBigIntegerField()
     season = models.PositiveSmallIntegerField()
     teams = models.JSONField(default=list)
