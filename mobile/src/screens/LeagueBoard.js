@@ -70,6 +70,23 @@ function Workshop({ trade, onClear }) {
   );
 }
 
+function sortPlayers(players, sort) {
+  if (sort === "slot") {
+    return players;
+  }
+  const ranked = players.map((player, index) => ({ player, index }));
+  ranked.sort((a, b) => {
+    let cmp = 0;
+    if (sort === "proj") {
+      cmp = (b.player.projectedPts || 0) - (a.player.projectedPts || 0);
+    } else {
+      cmp = (a.player.positionRank || 99) - (b.player.positionRank || 99);
+    }
+    return cmp !== 0 ? cmp : a.index - b.index;
+  });
+  return ranked.map((row) => row.player);
+}
+
 function TeamCard({ team, onPlayerPress, forceExpanded }) {
   const [expanded, setExpanded] = useState(Boolean(team.isYou));
   const showRoster = forceExpanded || expanded;
@@ -116,6 +133,7 @@ export default function LeagueBoard({ leagueId }) {
   const [themPlayer, setThemPlayer] = useState(null);
   const [workshop, setWorkshop] = useState(null);
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("slot");
 
   useEffect(() => {
     if (!leagueId) {
@@ -125,6 +143,7 @@ export default function LeagueBoard({ leagueId }) {
       setThemPlayer(null);
       setWorkshop(null);
       setQuery("");
+      setSort("slot");
       return;
     }
     setLoading(true);
@@ -135,6 +154,7 @@ export default function LeagueBoard({ leagueId }) {
         setThemPlayer(null);
         setWorkshop(null);
         setQuery("");
+        setSort("slot");
         setLoading(false);
       })
       .catch(() => {
@@ -143,6 +163,7 @@ export default function LeagueBoard({ leagueId }) {
         setThemPlayer(null);
         setWorkshop(null);
         setQuery("");
+        setSort("slot");
         setLoading(false);
       });
   }, [leagueId]);
@@ -178,13 +199,24 @@ export default function LeagueBoard({ leagueId }) {
   const visibleTeams = teams
     .map((team) => ({
       ...team,
-      players: needle
-        ? team.players.filter((player) =>
-            (player.name || "").toLowerCase().includes(needle)
-          )
-        : team.players,
+      players: sortPlayers(
+        needle
+          ? team.players.filter((player) =>
+              (player.name || "").toLowerCase().includes(needle)
+            )
+          : team.players,
+        sort
+      ),
     }))
     .filter((team) => !needle || team.players.length > 0);
+
+  const sortLabel = sort === "slot" ? "Sort: Slot" : sort === "proj" ? "Sort: Proj" : "Sort: Rank";
+
+  function cycleSort() {
+    setSort((current) =>
+      current === "slot" ? "proj" : current === "proj" ? "rank" : "slot"
+    );
+  }
 
   return (
     <View style={styles.board}>
@@ -195,6 +227,9 @@ export default function LeagueBoard({ leagueId }) {
         autoCapitalize="none"
         style={styles.search}
       />
+      <Pressable onPress={cycleSort}>
+        <Text onPress={cycleSort}>{sortLabel}</Text>
+      </Pressable>
       {workshop ? (
         <Workshop trade={workshop} onClear={clearSelection} />
       ) : null}

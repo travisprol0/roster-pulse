@@ -13,12 +13,12 @@ Per-team roster sorts by projected pts, position rank, or slot (cycle or select)
 
 ## Scope
 
-- [ ] Control on each card or one global sort applied to every roster.
-- [ ] Default: ESPN slot order as returned by the API (no surprise reorder until the user sorts).
+- [x] Control on each card or one global sort applied to every roster.
+- [x] Default: ESPN slot order as returned by the API (no surprise reorder until the user sorts).
 
 ## Acceptance criteria
 
-- [ ] Jest: after sort by proj, first player is the highest `projectedPts` in that fixture team.
+- [x] Jest: after sort by proj, first player is the highest `projectedPts` in that fixture team.
 
 ## Pipeline (mandatory)
 

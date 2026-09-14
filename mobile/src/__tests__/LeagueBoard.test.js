@@ -242,3 +242,60 @@ test("search filters to the matching player and team", async () => {
   expect(queryByText("Bench RB")).toBeNull();
   expect(queryByText("Weak TE")).toBeNull();
 });
+
+test("sorting by proj puts the highest projectedPts player first", async () => {
+  fetchLeague.mockResolvedValueOnce({
+    youTeamId: 1,
+    teams: [
+      {
+        id: 1,
+        name: "User Team",
+        isYou: true,
+        record: { wins: 0, losses: 0, ties: 0 },
+        pointsFor: 0,
+        pointsAgainst: 0,
+        playoffSeed: 1,
+        waiverRank: 1,
+        players: [
+          {
+            id: "low",
+            name: "Low Proj",
+            position: "WR",
+            slot: "WR",
+            projectedPts: 10,
+            actualPts: 1,
+            injury: "",
+            positionRank: 2,
+          },
+          {
+            id: "high",
+            name: "High Proj",
+            position: "RB",
+            slot: "RB",
+            projectedPts: 99,
+            actualPts: 20,
+            injury: "",
+            positionRank: 1,
+          },
+        ],
+      },
+    ],
+  });
+
+  const { findByText, getByText, getAllByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Low Proj")).toBeTruthy();
+  expect(getByText("Sort: Slot")).toBeTruthy();
+
+  let names = getAllByText(/^(Low Proj|High Proj)$/).map(
+    (node) => node.props.children
+  );
+  expect(names[0]).toBe("Low Proj");
+
+  fireEvent.press(getByText("Sort: Slot"));
+
+  expect(getByText("Sort: Proj")).toBeTruthy();
+  names = getAllByText(/^(Low Proj|High Proj)$/).map((node) => node.props.children);
+  expect(names[0]).toBe("High Proj");
+});
