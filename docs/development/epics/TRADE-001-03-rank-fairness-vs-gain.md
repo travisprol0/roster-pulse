@@ -13,14 +13,14 @@ Toggle sort: current **fairness** (`min(teamADelta, teamBDelta)` desc) vs **your
 
 ## Scope
 
-- [ ] Keep default fairness (do not change `find_trades` default sort without a param).
-- [ ] `?sort=fair|you` or client sort of the same payload.
-- [ ] Toggle in TradeDashboard.
+- [x] Keep default fairness (do not change `find_trades` default sort without a param).
+- [x] `?sort=fair|you` or client sort of the same payload.
+- [x] Toggle in TradeDashboard.
 
 ## Acceptance criteria
 
 - [ ] Pytest if sort is server-side: order changes for a known fixture.
-- [ ] Jest: toggle relabels and reorders rows.
+- [x] Jest: toggle relabels and reorders rows.
 
 ## Pipeline (mandatory)
 

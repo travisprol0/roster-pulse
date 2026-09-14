@@ -218,3 +218,46 @@ test("position filter keeps rows where send or receive matches", async () => {
   expect(getByText("Bench RB")).toBeTruthy();
   expect(queryByText("Weak TE")).toBeNull();
 });
+
+test("sort toggle relabels and reorders fairness vs your gain", async () => {
+  fetchTrades.mockResolvedValue({
+    trades: [
+      {
+        id: "greedy",
+        send: "Greedy send",
+        receive: "Cheap TE",
+        teamBId: 2,
+        teamBName: "Other Team",
+        teamADelta: 10,
+        teamBDelta: 0.5,
+      },
+      {
+        id: "fair",
+        send: "Fair send",
+        receive: "TE2",
+        teamBId: 2,
+        teamBName: "Other Team",
+        teamADelta: 4.2,
+        teamBDelta: 3.1,
+      },
+    ],
+  });
+
+  const { findByText, getByText, getAllByText } = render(
+    <TradeDashboard leagueId="111" />
+  );
+  expect(await findByText("Fairness")).toBeTruthy();
+
+  let names = getAllByText(/^(Fair send|Greedy send)$/).map(
+    (node) => node.props.children
+  );
+  expect(names).toEqual(["Fair send", "Greedy send"]);
+
+  fireEvent.press(getByText("Fairness"));
+
+  expect(getByText("Your gain")).toBeTruthy();
+  names = getAllByText(/^(Fair send|Greedy send)$/).map(
+    (node) => node.props.children
+  );
+  expect(names).toEqual(["Greedy send", "Fair send"]);
+});

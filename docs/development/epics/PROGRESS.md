@@ -20,12 +20,12 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | Track | Done | In progress | Not started | Total |
 | ----- | ---- | ----------- | ----------- | ----- |
 | **USE-001** | 5 | 0 | 0 | 5 |
-| **TRADE-001** | 2 | 0 | 2 | 4 |
+| **TRADE-001** | 3 | 0 | 1 | 4 |
 | **BOARD-001** | 0 | 0 | 4 | 4 |
 | **LINE-001** | 0 | 0 | 2 | 2 |
 | **SYNC-001** | 0 | 0 | 3 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 7 | 0 | 13 | 20 |
+| **All tickets** | 8 | 0 | 12 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -53,7 +53,7 @@ Source: [TRADE-001-trade-workshop.md](TRADE-001-trade-workshop.md)
 | ------ | -- | ----- | ----- |
 | Done | TRADE-001-01 | Filter opponent / position | Client-side filters; `sendPosition`/`receivePosition`; cap stays 20. |
 | Done | TRADE-001-02 | Counterpart team on every row | UI-only; `teamBName` JSON from USE-001-02. List column **Them**. |
-| Not started | TRADE-001-03 | Rank fairness vs your gain | — |
+| Done | TRADE-001-03 | Rank fairness vs your gain | UI-only client sort; Fairness default vs Your gain. Cap stays 20. |
 | Not started | TRADE-001-04 | 2-for-1 search | — |
 
 ---

@@ -93,6 +93,7 @@ export default function TradeDashboard({ leagueId }) {
   const [selected, setSelected] = useState(null);
   const [opponentId, setOpponentId] = useState("all");
   const [position, setPosition] = useState("all");
+  const [sort, setSort] = useState("fair");
 
   useEffect(() => {
     if (!leagueId) {
@@ -101,6 +102,7 @@ export default function TradeDashboard({ leagueId }) {
       setSelected(null);
       setOpponentId("all");
       setPosition("all");
+      setSort("fair");
       return;
     }
     setLoading(true);
@@ -110,6 +112,7 @@ export default function TradeDashboard({ leagueId }) {
         setSelected(null);
         setOpponentId("all");
         setPosition("all");
+        setSort("fair");
         setLoading(false);
       })
       .catch(() => {
@@ -117,6 +120,7 @@ export default function TradeDashboard({ leagueId }) {
         setSelected(null);
         setOpponentId("all");
         setPosition("all");
+        setSort("fair");
         setLoading(false);
       });
   }, [leagueId]);
@@ -140,9 +144,26 @@ export default function TradeDashboard({ leagueId }) {
     }
     return true;
   });
+  visible.sort((a, b) => {
+    if (sort === "you") {
+      return b.teamADelta - a.teamADelta;
+    }
+    return (
+      Math.min(b.teamADelta, b.teamBDelta) - Math.min(a.teamADelta, a.teamBDelta)
+    );
+  });
 
   return (
     <View style={styles.table}>
+      <Pressable
+        onPress={() => setSort((current) => (current === "fair" ? "you" : "fair"))}
+      >
+        <Text
+          onPress={() => setSort((current) => (current === "fair" ? "you" : "fair"))}
+        >
+          {sort === "fair" ? "Fairness" : "Your gain"}
+        </Text>
+      </Pressable>
       <Filters
         trades={trades}
         onOpponent={setOpponentId}
