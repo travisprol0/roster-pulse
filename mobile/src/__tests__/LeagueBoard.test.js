@@ -226,3 +226,19 @@ test("Copy pitch copies names, counterpart team, and deltas without cookies", as
   expect(pitch).not.toMatch(/espn_s2/i);
   expect(pitch).not.toMatch(/SWID/i);
 });
+
+test("search filters to the matching player and team", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+
+  const { getByPlaceholderText, getByText, queryByText, findByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  fireEvent.changeText(getByPlaceholderText("Search players"), "te2");
+
+  expect(getByText("TE2")).toBeTruthy();
+  expect(getByText("Other Team")).toBeTruthy();
+  expect(queryByText("Bench RB")).toBeNull();
+  expect(queryByText("Weak TE")).toBeNull();
+});

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague } from "../api/league";
@@ -70,8 +70,9 @@ function Workshop({ trade, onClear }) {
   );
 }
 
-function TeamCard({ team, onPlayerPress }) {
+function TeamCard({ team, onPlayerPress, forceExpanded }) {
   const [expanded, setExpanded] = useState(Boolean(team.isYou));
+  const showRoster = forceExpanded || expanded;
 
   function toggle() {
     setExpanded((current) => !current);
@@ -92,7 +93,7 @@ function TeamCard({ team, onPlayerPress }) {
         {team.playoffSeed != null ? <Text style={styles.meta}>Seed {team.playoffSeed}</Text> : null}
         {team.waiverRank != null ? <Text style={styles.meta}>Waivers {team.waiverRank}</Text> : null}
       </View>
-      {expanded ? (
+      {showRoster ? (
         <View style={styles.table}>
           <PlayerHeader />
           {team.players.map((player) => (
@@ -114,6 +115,7 @@ export default function LeagueBoard({ leagueId }) {
   const [youPlayer, setYouPlayer] = useState(null);
   const [themPlayer, setThemPlayer] = useState(null);
   const [workshop, setWorkshop] = useState(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!leagueId) {
@@ -122,6 +124,7 @@ export default function LeagueBoard({ leagueId }) {
       setYouPlayer(null);
       setThemPlayer(null);
       setWorkshop(null);
+      setQuery("");
       return;
     }
     setLoading(true);
@@ -131,6 +134,7 @@ export default function LeagueBoard({ leagueId }) {
         setYouPlayer(null);
         setThemPlayer(null);
         setWorkshop(null);
+        setQuery("");
         setLoading(false);
       })
       .catch(() => {
@@ -138,6 +142,7 @@ export default function LeagueBoard({ leagueId }) {
         setYouPlayer(null);
         setThemPlayer(null);
         setWorkshop(null);
+        setQuery("");
         setLoading(false);
       });
   }, [leagueId]);
@@ -169,13 +174,37 @@ export default function LeagueBoard({ leagueId }) {
     );
   }
 
+  const needle = query.trim().toLowerCase();
+  const visibleTeams = teams
+    .map((team) => ({
+      ...team,
+      players: needle
+        ? team.players.filter((player) =>
+            (player.name || "").toLowerCase().includes(needle)
+          )
+        : team.players,
+    }))
+    .filter((team) => !needle || team.players.length > 0);
+
   return (
     <View style={styles.board}>
+      <TextInput
+        placeholder="Search players"
+        value={query}
+        onChangeText={setQuery}
+        autoCapitalize="none"
+        style={styles.search}
+      />
       {workshop ? (
         <Workshop trade={workshop} onClear={clearSelection} />
       ) : null}
-      {teams.map((team) => (
-        <TeamCard key={team.id} team={team} onPlayerPress={onPlayerPress} />
+      {visibleTeams.map((team) => (
+        <TeamCard
+          key={team.id}
+          team={team}
+          onPlayerPress={onPlayerPress}
+          forceExpanded={Boolean(needle)}
+        />
       ))}
     </View>
   );
@@ -185,6 +214,14 @@ const styles = StyleSheet.create({
   board: {
     gap: 12,
     marginBottom: 16,
+  },
+  search: {
+    borderWidth: 1,
+    borderColor: "#d4d4d8",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
   },
   card: {
     backgroundColor: "#fff",

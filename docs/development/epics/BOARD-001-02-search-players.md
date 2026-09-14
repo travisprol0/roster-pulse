@@ -13,13 +13,13 @@ A search box filters which players (and teams) show by name substring, case-inse
 
 ## Scope
 
-- [ ] Text input on the board.
-- [ ] Empty query shows the default collapse rules from 01 (or all teams if 01 not shipped).
-- [ ] Match highlights or at least filters rows.
+- [x] Text input on the board.
+- [x] Empty query shows the default collapse rules from 01 (or all teams if 01 not shipped).
+- [x] Match highlights or at least filters rows.
 
 ## Acceptance criteria
 
-- [ ] Jest: type a unique player name; other names gone; matching team visible.
+- [x] Jest: type a unique player name; other names gone; matching team visible.
 
 ## Pipeline (mandatory)
 
