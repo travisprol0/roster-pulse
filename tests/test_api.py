@@ -202,6 +202,14 @@ def test_trades_endpoint_returns_computed_trades(client):
     )
     assert match["teamADelta"] > 0
     assert match["teamBDelta"] > 0
+    assert match["sendId"] == "a-rb3"
+    assert match["receiveId"] == "b-te2"
+    assert match["teamBId"] == 2
+    assert match["teamBName"] == "Other Team"
+    assert match["afterA"] - match["beforeA"] == match["teamADelta"]
+    assert match["afterB"] - match["beforeB"] == match["teamBDelta"]
+    assert match["afterA"] > match["beforeA"]
+    assert match["afterB"] > match["beforeB"]
 
 
 @pytest.mark.django_db
@@ -245,3 +253,60 @@ def test_league_endpoint_empty_without_league_id(client):
     response = client.get("/api/league/")
     assert response.status_code == 200
     assert response.json() == {"youTeamId": None, "teams": []}
+
+
+@pytest.mark.django_db
+def test_evaluate_endpoint_mutual_pair_returns_positive_deltas(client):
+    _seed_league()
+    response = client.get(
+        f"/api/evaluate/?league_id={LEAGUE_ID}&send_id=a-rb3&receive_id=b-te2"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mutual"] is True
+    assert body["send"] == "Bench RB"
+    assert body["receive"] == "TE2"
+    assert body["sendId"] == "a-rb3"
+    assert body["receiveId"] == "b-te2"
+    assert body["teamBId"] == 2
+    assert body["teamBName"] == "Other Team"
+    assert body["teamADelta"] > 0
+    assert body["teamBDelta"] > 0
+    assert body["afterA"] - body["beforeA"] == body["teamADelta"]
+    assert body["afterB"] - body["beforeB"] == body["teamBDelta"]
+
+
+@pytest.mark.django_db
+def test_evaluate_endpoint_lopsided_pair_returns_numeric_deltas(client):
+    _seed_league()
+    response = client.get(
+        f"/api/evaluate/?league_id={LEAGUE_ID}&send_id=a-rb1&receive_id=b-rb2"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mutual"] is False
+    assert body["send"] == "RB1"
+    assert body["receive"] == "RB2"
+    assert body["sendId"] == "a-rb1"
+    assert body["receiveId"] == "b-rb2"
+    assert isinstance(body["teamADelta"], (int, float))
+    assert isinstance(body["teamBDelta"], (int, float))
+    assert body["afterA"] - body["beforeA"] == body["teamADelta"]
+    assert body["afterB"] - body["beforeB"] == body["teamBDelta"]
+
+
+@pytest.mark.django_db
+def test_evaluate_endpoint_400_when_players_not_on_the_two_teams(client):
+    _seed_league()
+    missing = client.get(
+        f"/api/evaluate/?league_id={LEAGUE_ID}&send_id=missing&receive_id=b-te2"
+    )
+    swapped = client.get(
+        f"/api/evaluate/?league_id={LEAGUE_ID}&send_id=b-te2&receive_id=a-rb3"
+    )
+    same_team = client.get(
+        f"/api/evaluate/?league_id={LEAGUE_ID}&send_id=a-rb3&receive_id=a-te"
+    )
+    assert missing.status_code == 400
+    assert swapped.status_code == 400
+    assert same_team.status_code == 400

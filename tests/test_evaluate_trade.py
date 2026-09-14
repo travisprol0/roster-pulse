@@ -28,12 +28,25 @@ def test_find_trades_includes_mutually_beneficial_one_for_one():
     team_a = surplus_rb_team()
     team_b = surplus_te_team()
 
-    trades = find_trades(team_a, [{"players": team_b}], PPR, SLOTS)
+    trades = find_trades(
+        team_a,
+        [{"id": 2, "name": "Other Team", "players": team_b}],
+        PPR,
+        SLOTS,
+    )
 
     match = next(t for t in trades if t["send"] == "a-rb3" and t["receive"] == "b-te2")
     assert match["teamADelta"] > 0
     assert match["teamBDelta"] > 0
     assert match["id"] == "a-rb3-b-te2"
+    assert match["sendId"] == "a-rb3"
+    assert match["receiveId"] == "b-te2"
+    assert match["teamBId"] == 2
+    assert match["teamBName"] == "Other Team"
+    assert match["afterA"] - match["beforeA"] == match["teamADelta"]
+    assert match["afterB"] - match["beforeB"] == match["teamBDelta"]
+    assert match["afterA"] > match["beforeA"]
+    assert match["afterB"] > match["beforeB"]
 
 
 def test_find_trades_caps_results():

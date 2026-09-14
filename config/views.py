@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from engine.trade import find_trades
+from engine.trade import find_trades, score_trade
 from espn.client import EspnFantasyClient, EspnUnauthorizedError
 from espn.normalize import starter_slots, user_team
 from leagues.models import EspnAccount, LeagueSettings, RosterSnapshot
@@ -208,3 +208,74 @@ def trades(request):
         if team.get("id") != mine.get("id")
     ]
     return _json({"trades": find_trades(mine_players, others, PTS_SCORING, slots)})
+
+
+def _player_by_id(players, player_id):
+    wanted = str(player_id)
+    for player in players or []:
+        if str(player.get("id")) == wanted:
+            return player
+    return None
+
+
+@csrf_exempt
+def evaluate(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    league_id = request.GET.get("league_id")
+    send_id = request.GET.get("send_id")
+    receive_id = request.GET.get("receive_id")
+    if not league_id or not send_id or not receive_id:
+        return _json({"error": "invalid players"}, status=400)
+
+    snapshot = _snapshot(league_id)
+    if not snapshot:
+        return _json({"error": "invalid players"}, status=400)
+
+    settings = LeagueSettings.objects.filter(
+        espn_league_id=int(league_id), season=snapshot.season
+    ).first()
+    slots = starter_slots(settings.roster_sizes if settings else {})
+    mine = user_team(snapshot.teams, snapshot.account.swid)
+    if not mine:
+        return _json({"error": "invalid players"}, status=400)
+
+    send = _player_by_id(mine.get("players"), send_id)
+    receive = None
+    other = None
+    for team in snapshot.teams:
+        if team.get("id") == mine.get("id"):
+            continue
+        found = _player_by_id(team.get("players"), receive_id)
+        if found:
+            receive = found
+            other = team
+            break
+    if not send or not receive:
+        return _json({"error": "invalid players"}, status=400)
+
+    scored = score_trade(
+        mine.get("players") or [],
+        other.get("players") or [],
+        [send],
+        [receive],
+        PTS_SCORING,
+        slots,
+    )
+    return _json(
+        {
+            "send": send.get("name"),
+            "receive": receive.get("name"),
+            "sendId": send.get("id"),
+            "receiveId": receive.get("id"),
+            "teamBId": other.get("id"),
+            "teamBName": other.get("name"),
+            "teamADelta": scored["team_a_delta"],
+            "teamBDelta": scored["team_b_delta"],
+            "beforeA": scored["before_a"],
+            "afterA": scored["after_a"],
+            "beforeB": scored["before_b"],
+            "afterB": scored["after_b"],
+            "mutual": scored["team_a_delta"] > 0 and scored["team_b_delta"] > 0,
+        }
+    )

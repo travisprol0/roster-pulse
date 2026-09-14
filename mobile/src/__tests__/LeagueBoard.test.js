@@ -1,11 +1,20 @@
-import { render, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
+import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague } from "../api/league";
 import LeagueBoard from "../screens/LeagueBoard";
 
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(() => Promise.resolve({ youTeamId: null, teams: [] })),
 }));
+
+jest.mock(
+  "../api/evaluate",
+  () => ({
+    fetchEvaluate: jest.fn(),
+  }),
+  { virtual: true }
+);
 
 const board = {
   youTeamId: 1,
@@ -93,4 +102,80 @@ test("renders standings and roster rows for every team", async () => {
   expect(getByText("TE2")).toBeTruthy();
   expect(getByTestId("team-1")).toBeTruthy();
   expect(getByTestId("team-2")).toBeTruthy();
+});
+
+const evaluateResponse = {
+  send: "Bench RB",
+  receive: "TE2",
+  sendId: "a-rb3",
+  receiveId: "b-te2",
+  teamBId: 2,
+  teamBName: "Other Team",
+  teamADelta: 4.2,
+  teamBDelta: 3.1,
+  beforeA: 610,
+  afterA: 614.2,
+  beforeB: 480,
+  afterB: 483.1,
+  mutual: true,
+};
+
+test("pressing your player then an opponent player opens the Workshop", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
+
+  const { getByText, getAllByText, findByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  await waitFor(() => getByText("Bench RB"));
+
+  fireEvent.press(getByText("Bench RB"));
+  fireEvent.press(getByText("TE2"));
+
+  await waitFor(() => expect(fetchEvaluate).toHaveBeenCalledWith("12345", "a-rb3", "b-te2"));
+  expect(await findByText("Workshop")).toBeTruthy();
+  expect(getAllByText("Other Team").length).toBeGreaterThan(1);
+  expect(getByText("+4.2")).toBeTruthy();
+  expect(getByText("+3.1")).toBeTruthy();
+  expect(getByText("610")).toBeTruthy();
+  expect(getByText("614.2")).toBeTruthy();
+  expect(getByText("480")).toBeTruthy();
+  expect(getByText("483.1")).toBeTruthy();
+});
+
+test("pressing an opponent player then your player opens the same Workshop", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
+
+  const { getByText, getAllByText, findByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  await waitFor(() => getByText("TE2"));
+
+  fireEvent.press(getByText("TE2"));
+  fireEvent.press(getByText("Bench RB"));
+
+  await waitFor(() => expect(fetchEvaluate).toHaveBeenCalledWith("12345", "a-rb3", "b-te2"));
+  expect(await findByText("Workshop")).toBeTruthy();
+  expect(getAllByText("Other Team").length).toBeGreaterThan(1);
+});
+
+test("Clear selection dismisses the Workshop", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
+
+  const { getByText, findByText, queryByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  await waitFor(() => getByText("Bench RB"));
+
+  fireEvent.press(getByText("Bench RB"));
+  fireEvent.press(getByText("TE2"));
+  expect(await findByText("Workshop")).toBeTruthy();
+
+  fireEvent.press(getByText("Clear selection"));
+
+  expect(queryByText("Workshop")).toBeNull();
+  expect(getByText("Bench RB")).toBeTruthy();
+  expect(getByText("TE2")).toBeTruthy();
 });

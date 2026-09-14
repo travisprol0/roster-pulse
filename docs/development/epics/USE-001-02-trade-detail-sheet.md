@@ -13,14 +13,14 @@ Press a suggested trade and see counterpart team, both players, both deltas, and
 
 ## Scope
 
-- [ ] Extend `find_trades` / `GET /api/trades/` with `sendId`, `receiveId`, `teamBId`, `teamBName`, `beforeA`, `afterA`, `beforeB`, `afterB` (names as implemented; keep existing `send` / `receive` / deltas).
-- [ ] TradeDashboard rows are pressable.
-- [ ] Detail sheet/panel lists the fields above. Dismiss without navigation stack.
+- [x] Extend `find_trades` / `GET /api/trades/` with `sendId`, `receiveId`, `teamBId`, `teamBName`, `beforeA`, `afterA`, `beforeB`, `afterB` (names as implemented; keep existing `send` / `receive` / deltas).
+- [x] TradeDashboard rows are pressable.
+- [x] Detail sheet/panel lists the fields above. Dismiss without navigation stack.
 
 ## Acceptance criteria
 
-- [ ] Pytest: seeded league trade JSON includes ids and counterpart name for Bench RB ↔ TE2 (or equivalent fixture).
-- [ ] Jest: press a row → detail text visible; dismiss returns to list.
+- [x] Pytest: seeded league trade JSON includes ids and counterpart name for Bench RB ↔ TE2 (or equivalent fixture).
+- [x] Jest: press a row → detail text visible; dismiss returns to list.
 
 ## Pipeline (mandatory)
 

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague } from "../api/league";
+
+function formatDelta(delta) {
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
 
 function recordText(record) {
   return `${record.wins}-${record.losses}-${record.ties}`;
@@ -21,21 +26,43 @@ function PlayerHeader() {
   );
 }
 
-function PlayerRow({ player }) {
+function PlayerRow({ player, onPress }) {
   return (
-    <View style={styles.playerRow}>
+    <Pressable onPress={onPress} style={styles.playerRow}>
       <Text style={styles.cellSlot}>{player.slot}</Text>
       <Text style={styles.cellPos}>{player.position}</Text>
-      <Text style={styles.cellName}>{player.name}</Text>
+      <Text style={styles.cellName} onPress={onPress}>
+        {player.name}
+      </Text>
       <Text style={styles.cellNum}>{player.projectedPts}</Text>
       <Text style={styles.cellNum}>{player.actualPts}</Text>
       <Text style={styles.cellNum}>{player.positionRank}</Text>
       <Text style={styles.cellInjury}>{player.injury}</Text>
+    </Pressable>
+  );
+}
+
+function Workshop({ trade, onClear }) {
+  return (
+    <View style={styles.workshop}>
+      <Text style={styles.workshopTitle}>Workshop</Text>
+      <Text>{trade.teamBName}</Text>
+      <Text>{trade.send}</Text>
+      <Text>{trade.receive}</Text>
+      <Text>{formatDelta(trade.teamADelta)}</Text>
+      <Text>{formatDelta(trade.teamBDelta)}</Text>
+      <Text>{trade.beforeA}</Text>
+      <Text>{trade.afterA}</Text>
+      <Text>{trade.beforeB}</Text>
+      <Text>{trade.afterB}</Text>
+      <Pressable onPress={onClear}>
+        <Text onPress={onClear}>Clear selection</Text>
+      </Pressable>
     </View>
   );
 }
 
-function TeamCard({ team }) {
+function TeamCard({ team, onPlayerPress }) {
   return (
     <View testID={`team-${team.id}`} style={[styles.card, team.isYou && styles.cardYou]}>
       <View style={styles.teamHead}>
@@ -52,7 +79,11 @@ function TeamCard({ team }) {
       <View style={styles.table}>
         <PlayerHeader />
         {team.players.map((player) => (
-          <PlayerRow key={String(player.id)} player={player} />
+          <PlayerRow
+            key={String(player.id)}
+            player={player}
+            onPress={() => onPlayerPress(player, team.isYou)}
+          />
         ))}
       </View>
     </View>
@@ -62,24 +93,53 @@ function TeamCard({ team }) {
 export default function LeagueBoard({ leagueId }) {
   const [loading, setLoading] = useState(Boolean(leagueId));
   const [teams, setTeams] = useState([]);
+  const [youPlayer, setYouPlayer] = useState(null);
+  const [themPlayer, setThemPlayer] = useState(null);
+  const [workshop, setWorkshop] = useState(null);
 
   useEffect(() => {
     if (!leagueId) {
       setLoading(false);
       setTeams([]);
+      setYouPlayer(null);
+      setThemPlayer(null);
+      setWorkshop(null);
       return;
     }
     setLoading(true);
     fetchLeague(leagueId)
       .then((data) => {
         setTeams(data.teams || []);
+        setYouPlayer(null);
+        setThemPlayer(null);
+        setWorkshop(null);
         setLoading(false);
       })
       .catch(() => {
         setTeams([]);
+        setYouPlayer(null);
+        setThemPlayer(null);
+        setWorkshop(null);
         setLoading(false);
       });
   }, [leagueId]);
+
+  function onPlayerPress(player, isYou) {
+    const nextYou = isYou ? player : youPlayer;
+    const nextThem = isYou ? themPlayer : player;
+    setYouPlayer(nextYou);
+    setThemPlayer(nextThem);
+    if (!nextYou || !nextThem) {
+      return;
+    }
+    fetchEvaluate(leagueId, nextYou.id, nextThem.id).then(setWorkshop);
+  }
+
+  function clearSelection() {
+    setYouPlayer(null);
+    setThemPlayer(null);
+    setWorkshop(null);
+  }
 
   if (loading) {
     return <ActivityIndicator testID="league-loading" />;
@@ -93,8 +153,11 @@ export default function LeagueBoard({ leagueId }) {
 
   return (
     <View style={styles.board}>
+      {workshop ? (
+        <Workshop trade={workshop} onClear={clearSelection} />
+      ) : null}
       {teams.map((team) => (
-        <TeamCard key={team.id} team={team} />
+        <TeamCard key={team.id} team={team} onPlayerPress={onPlayerPress} />
       ))}
     </View>
   );
@@ -181,5 +244,15 @@ const styles = StyleSheet.create({
   empty: {
     padding: 16,
     color: "#52525b",
+  },
+  workshop: {
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e4e4e7",
+  },
+  workshopTitle: {
+    fontWeight: "700",
   },
 });
