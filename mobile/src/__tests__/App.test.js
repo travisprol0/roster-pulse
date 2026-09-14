@@ -48,13 +48,37 @@ test("shows settings, loads switcher leagues, and fetches trades by league id", 
   mockLeagues();
   useWindowWidth.mockReturnValue(400);
 
-  const { getByPlaceholderText, findByText, getByText } = render(<App />);
+  const { queryByPlaceholderText, findByText, getByText } = render(<App />);
 
-  expect(getByPlaceholderText("League ID 1")).toBeTruthy();
   expect(getByText("Roster Pulse")).toBeTruthy();
   expect(await findByText("League A")).toBeTruthy();
   expect(await findByText("League B")).toBeTruthy();
+  expect(queryByPlaceholderText("League ID 1")).toBeNull();
   await waitFor(() => expect(fetchTrades).toHaveBeenCalledWith("111"));
+});
+
+test("cookie fields stay collapsed until Leagues / cookies is expanded", async () => {
+  mockLeagues();
+  useWindowWidth.mockReturnValue(400);
+
+  const { queryByPlaceholderText, getByPlaceholderText, findByText, getByText } =
+    render(<App />);
+  await findByText("League A");
+
+  expect(queryByPlaceholderText("League ID 1")).toBeNull();
+  fireEvent.press(getByText("Leagues / cookies"));
+  expect(getByPlaceholderText("League ID 1")).toBeTruthy();
+});
+
+test("shows League ID placeholder when no leagues are loaded", async () => {
+  fetchLeagues.mockResolvedValue({ leagues: [] });
+  fetchTrades.mockResolvedValue({ trades: [] });
+  fetchLeague.mockResolvedValue({ youTeamId: null, teams: [] });
+  useWindowWidth.mockReturnValue(400);
+
+  const { findByPlaceholderText } = render(<App />);
+
+  expect(await findByPlaceholderText("League ID 1")).toBeTruthy();
 });
 
 test("uses a two-column layout at desktop width", async () => {
@@ -87,6 +111,7 @@ test("page scrolls and settings buttons still press", async () => {
   await findByText("League A");
 
   expect(getByTestId("app-scroll").type).toBe("RCTScrollView");
+  fireEvent.press(getByText("Leagues / cookies"));
   fireEvent.press(getByText("Add league"));
   expect(getByText("League 2")).toBeTruthy();
 });

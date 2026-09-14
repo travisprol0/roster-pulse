@@ -18,6 +18,33 @@ test("shows a league block with league id and both cookies", () => {
   expect(getByText("SWID")).toBeTruthy();
 });
 
+test("collapses cookie fields when saved leagues exist until Leagues / cookies is pressed", () => {
+  const { queryByPlaceholderText, getByPlaceholderText, getByText } = render(
+    <SettingsScreen savedLeagues={[{ id: "111", name: "League A" }]} />
+  );
+
+  expect(queryByPlaceholderText("League ID 1")).toBeNull();
+  expect(queryByPlaceholderText("espn_s2")).toBeNull();
+  expect(queryByPlaceholderText("swid")).toBeNull();
+
+  fireEvent.press(getByText("Leagues / cookies"));
+
+  expect(getByPlaceholderText("League ID 1")).toBeTruthy();
+  expect(getByPlaceholderText("espn_s2")).toBeTruthy();
+  expect(getByPlaceholderText("swid")).toBeTruthy();
+});
+
+test("Add league still works when expanded after sync", () => {
+  const { getByText } = render(
+    <SettingsScreen savedLeagues={[{ id: "111", name: "League A" }]} />
+  );
+
+  fireEvent.press(getByText("Leagues / cookies"));
+  fireEvent.press(getByText("Add league"));
+
+  expect(getByText("League 2")).toBeTruthy();
+});
+
 test("submitting two league blocks sends cookies per league", () => {
   const { getByPlaceholderText, getByText, getAllByPlaceholderText } = render(
     <SettingsScreen />

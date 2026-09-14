@@ -49,7 +49,7 @@ export default function App() {
         style={[styles.layout, desktop ? styles.layoutWide : styles.layoutNarrow]}
       >
         <View style={desktop ? styles.sidebar : styles.stackSection}>
-          <SettingsScreen onSaved={loadLeagues} />
+          <SettingsScreen onSaved={loadLeagues} savedLeagues={leagues} />
         </View>
         <View style={desktop ? styles.main : styles.stackSection}>
           <LeagueSwitcher

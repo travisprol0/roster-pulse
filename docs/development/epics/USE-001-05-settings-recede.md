@@ -13,14 +13,14 @@ After at least one league is loaded, the cookie form is not the whole product. B
 
 ## Scope
 
-- [ ] When `leagues.length > 0`, cookie fields are collapsed by default (header still opens them).
-- [ ] Empty state: form expanded (first-run).
-- [ ] Submit still syncs and calls `onSaved`.
+- [x] When `leagues.length > 0`, cookie fields are collapsed by default (header still opens them).
+- [x] Empty state: form expanded (first-run).
+- [x] Submit still syncs and calls `onSaved`.
 
 ## Acceptance criteria
 
-- [ ] Jest: with mocked `fetchLeagues` returning a league, cookie placeholders are not in the tree until expand (or `accessibilityState` collapsed).
-- [ ] Jest: with no leagues, League ID placeholder is visible.
+- [x] Jest: with mocked `fetchLeagues` returning a league, cookie placeholders are not in the tree until expand (or `accessibilityState` collapsed).
+- [x] Jest: with no leagues, League ID placeholder is visible.
 
 ## Pipeline (mandatory)
 
