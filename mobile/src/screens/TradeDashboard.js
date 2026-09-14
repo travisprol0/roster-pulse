@@ -17,6 +17,7 @@ function Header() {
     <View style={[styles.row, styles.header]}>
       <Text style={[styles.cell, styles.headerText]}>You send</Text>
       <Text style={[styles.cell, styles.headerText]}>You receive</Text>
+      <Text style={[styles.cell, styles.headerText]}>Them</Text>
       <Text style={[styles.cell, styles.headerText]}>Your delta</Text>
       <Text style={[styles.cell, styles.headerText]}>Their delta</Text>
     </View>
@@ -100,6 +101,7 @@ export default function TradeDashboard({ leagueId }) {
               {item.send}
             </Text>
             <Text style={styles.cell}>{item.receive}</Text>
+            <Text style={styles.cell}>{item.teamBName}</Text>
             <Text style={styles.cell}>{formatDelta(item.teamADelta)}</Text>
             <Text style={styles.cell}>{formatDelta(item.teamBDelta)}</Text>
           </Pressable>

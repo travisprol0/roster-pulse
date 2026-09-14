@@ -57,6 +57,18 @@ test("renders proposed trades from the mock JSON response", async () => {
   expect(await findByText("TE2")).toBeTruthy();
 });
 
+test("shows counterpart team on each suggested trade row", async () => {
+  fetchTrades.mockResolvedValue(mockResponse);
+
+  const { findByText, getByText, queryByText } = render(
+    <TradeDashboard leagueId="111" />
+  );
+
+  expect(await findByText("Other Team")).toBeTruthy();
+  expect(getByText("Them")).toBeTruthy();
+  expect(queryByText("Workshop")).toBeNull();
+});
+
 test("displays projected point deltas for both teams", async () => {
   fetchTrades.mockResolvedValue(mockResponse);
 
