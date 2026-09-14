@@ -6,3 +6,5 @@ db.sqlite3
 *.egg-info/
 .venv/
 venv/
+mobile/node_modules/
+mobile/.expo/
