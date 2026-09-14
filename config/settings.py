@@ -3,6 +3,20 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_dotenv(path):
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+_load_dotenv(BASE_DIR / ".env")
+
 SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key")
 
 DEBUG = os.environ.get("DEBUG", "1") == "1"
@@ -20,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "leagues",
 ]
 
 MIDDLEWARE = [
@@ -57,7 +72,7 @@ DATABASES = {
         "NAME": os.environ.get("POSTGRES_DB", "roster_pulse"),
         "USER": os.environ.get("POSTGRES_USER", "roster"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "roster"),
-        "HOST": os.environ.get("POSTGRES_HOST", "db"),
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
