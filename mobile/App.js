@@ -1,12 +1,12 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View } from "react-native";
 
-import SettingsScreen from "./src/screens/SettingsScreen";
+import TradeDashboard from "./src/screens/TradeDashboard";
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <SettingsScreen />
+      <TradeDashboard />
       <StatusBar style="auto" />
     </View>
   );
