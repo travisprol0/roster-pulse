@@ -13,13 +13,13 @@ Select one of your players and one opponent player; show evaluation even when `e
 
 ## Scope
 
-- [ ] `GET` or `POST /api/evaluate/` with `league_id`, `send_id`, `receive_id` (or teamB + player ids). Returns deltas and starter totals; `mutual: true/false`.
-- [ ] Board: press your player then theirs (or reverse) to fill the workshop. Clear selection control.
+- [x] `GET` or `POST /api/evaluate/` with `league_id`, `send_id`, `receive_id` (or teamB + player ids). Returns deltas and starter totals; `mutual: true/false`.
+- [x] Board: press your player then theirs (or reverse) to fill the workshop. Clear selection control.
 
 ## Acceptance criteria
 
-- [ ] Pytest: mutual pair `mutual` true and positive deltas; lopsided pair `mutual` false with numeric deltas.
-- [ ] Jest: two presses open the same detail pattern as 02.
+- [x] Pytest: mutual pair `mutual` true and positive deltas; lopsided pair `mutual` false with numeric deltas.
+- [x] Jest: two presses open the same detail pattern as 02.
 
 ## Pipeline (mandatory)
 
