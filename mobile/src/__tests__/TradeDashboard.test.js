@@ -149,3 +149,72 @@ test("Copy pitch copies names, counterpart team, and deltas without cookies", as
   expect(pitch).not.toMatch(/espn_s2/i);
   expect(pitch).not.toMatch(/SWID/i);
 });
+
+const twoTeamResponse = {
+  trades: [
+    {
+      id: "t1",
+      send: "Bench RB",
+      receive: "TE2",
+      sendId: "a-rb3",
+      receiveId: "b-te2",
+      sendPosition: "RB",
+      receivePosition: "TE",
+      teamBId: 2,
+      teamBName: "Other Team",
+      teamADelta: 4.2,
+      teamBDelta: 3.1,
+      beforeA: 610,
+      afterA: 614.2,
+      beforeB: 480,
+      afterB: 483.1,
+    },
+    {
+      id: "t2",
+      send: "Weak TE",
+      receive: "WR1",
+      sendId: "a-te",
+      receiveId: "c-wr1",
+      sendPosition: "TE",
+      receivePosition: "WR",
+      teamBId: 3,
+      teamBName: "Rival Team",
+      teamADelta: 2.0,
+      teamBDelta: 1.5,
+      beforeA: 610,
+      afterA: 612,
+      beforeB: 400,
+      afterB: 401.5,
+    },
+  ],
+};
+
+test("opponent filter hides the other counterpart team's rows", async () => {
+  fetchTrades.mockResolvedValue(twoTeamResponse);
+
+  const { findByText, getByText, getByTestId, queryByText } = render(
+    <TradeDashboard leagueId="111" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+  expect(getByText("Weak TE")).toBeTruthy();
+
+  fireEvent.press(getByTestId("filter-opponent-3"));
+
+  expect(queryByText("Bench RB")).toBeNull();
+  expect(getByText("Weak TE")).toBeTruthy();
+  expect(getByText("Rival Team")).toBeTruthy();
+});
+
+test("position filter keeps rows where send or receive matches", async () => {
+  fetchTrades.mockResolvedValue(twoTeamResponse);
+
+  const { findByText, getByText, getByTestId, queryByText } = render(
+    <TradeDashboard leagueId="111" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  fireEvent.press(getByTestId("filter-position-RB"));
+
+  expect(getByText("Bench RB")).toBeTruthy();
+  expect(queryByText("Weak TE")).toBeNull();
+});

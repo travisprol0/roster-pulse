@@ -13,13 +13,15 @@ Narrow the suggested list by counterpart team and by send or receive position.
 
 ## Scope
 
-- [ ] Controls: opponent select (all / team name), position select (all / QB/RB/WR/TE).
-- [ ] Filter client-side if the list is capped at 20; document if we raise the cap.
+- [x] Controls: opponent select (all / team name), position select (all / QB/RB/WR/TE).
+- [x] Filter client-side if the list is capped at 20; document if we raise the cap.
+
+Cap remains 20.
 
 ## Acceptance criteria
 
-- [ ] Jest: fixture with two counterpart teams; filter hides the other team’s rows.
-- [ ] Jest: position filter keeps only matching send or receive position (pick one rule and test it).
+- [x] Jest: fixture with two counterpart teams; filter hides the other team’s rows.
+- [x] Jest: position filter keeps only matching send or receive position (pick one rule and test it).
 
 ## Pipeline (mandatory)
 

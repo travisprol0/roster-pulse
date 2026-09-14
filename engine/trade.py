@@ -84,6 +84,8 @@ def find_trades(user_roster, other_teams, scoring, slots, limit=20):
                             "receive": player_b["name"],
                             "sendId": player_a["id"],
                             "receiveId": player_b["id"],
+                            "sendPosition": player_a.get("position"),
+                            "receivePosition": player_b.get("position"),
                             "teamBId": team_b_id,
                             "teamBName": team_b_name,
                             "teamADelta": result["team_a_delta"],

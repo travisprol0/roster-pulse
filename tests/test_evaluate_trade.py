@@ -43,6 +43,8 @@ def test_find_trades_includes_mutually_beneficial_one_for_one():
     assert match["receiveId"] == "b-te2"
     assert match["teamBId"] == 2
     assert match["teamBName"] == "Other Team"
+    assert match["sendPosition"] == "RB"
+    assert match["receivePosition"] == "TE"
     assert match["afterA"] - match["beforeA"] == match["teamADelta"]
     assert match["afterB"] - match["beforeB"] == match["teamBDelta"]
     assert match["afterA"] > match["beforeA"]

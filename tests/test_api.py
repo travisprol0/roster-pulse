@@ -206,6 +206,8 @@ def test_trades_endpoint_returns_computed_trades(client):
     assert match["receiveId"] == "b-te2"
     assert match["teamBId"] == 2
     assert match["teamBName"] == "Other Team"
+    assert match["sendPosition"] == "RB"
+    assert match["receivePosition"] == "TE"
     assert match["afterA"] - match["beforeA"] == match["teamADelta"]
     assert match["afterB"] - match["beforeB"] == match["teamBDelta"]
     assert match["afterA"] > match["beforeA"]
