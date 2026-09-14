@@ -1,0 +1,52 @@
+---
+description: Strict TDD — user runs all tests; agent never runs pytest; mock ESPN
+alwaysApply: true
+---
+
+# Rules of Engagement
+
+This project rule **overrides** any default to “run commands / verify tests yourself.”
+
+## The user runs ALL tests
+
+Never run `pytest`, `python manage.py test`, or any other test runner unless the user **explicitly** says to run tests.
+
+After Red **and** after Green: stop and ask the user to run the tests. Wait for their result before the next step.
+
+```text
+# ❌ BAD — agent verifies
+pytest tests/test_health.py
+
+# ✅ GOOD — agent implements or writes tests, then stops
+# Ask: run pytest and tell me if it failed (Red) or passed (Green).
+```
+
+## Strict TDD
+
+Write failing tests (Red) BEFORE any implementation code (Green). Do not implement production logic in the same step as the tests.
+
+## Pause for Verification
+
+After generating tests, stop. Do not write the implementation until the user confirms the tests fail as expected.
+
+After implementing, stop. Do not run the suite. Do not assume Green until the user confirms the tests pass.
+
+## Minimal Implementation
+
+When implementing, write only the code required to make the failing tests pass. No extra features, refactors, or speculative helpers.
+
+## Mock External APIs
+
+Never make live network calls in tests. Mock the ESPN API with `unittest.mock` or `responses`.
+
+```python
+# ❌ BAD — live ESPN call in a test
+def test_scoreboard():
+    data = requests.get("https://site.api.espn.com/...")
+
+# ✅ GOOD — mock the HTTP layer
+@patch("mymodule.requests.get")
+def test_scoreboard(mock_get):
+    mock_get.return_value.json.return_value = {"events": []}
+    ...
+```
