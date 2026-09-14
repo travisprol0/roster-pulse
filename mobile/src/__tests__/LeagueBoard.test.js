@@ -88,7 +88,7 @@ test("prompts to add a league when none selected", () => {
 
 test("renders standings and roster rows for every team", async () => {
   fetchLeague.mockResolvedValueOnce(board);
-  const { getByText, getByTestId } = render(<LeagueBoard leagueId="12345" />);
+  const { getByText, getByTestId, queryByText } = render(<LeagueBoard leagueId="12345" />);
 
   await waitFor(() => getByText("User Team"));
 
@@ -104,9 +104,21 @@ test("renders standings and roster rows for every team", async () => {
   expect(getByText("Bench RB")).toBeTruthy();
   expect(getByText("BE")).toBeTruthy();
   expect(getByText("OUT")).toBeTruthy();
-  expect(getByText("TE2")).toBeTruthy();
+  expect(queryByText("TE2")).toBeNull();
   expect(getByTestId("team-1")).toBeTruthy();
   expect(getByTestId("team-2")).toBeTruthy();
+});
+
+test("other team's roster stays collapsed until the team header is pressed", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  const { getByText, queryByText } = render(<LeagueBoard leagueId="12345" />);
+
+  await waitFor(() => getByText("Bench RB"));
+  expect(queryByText("TE2")).toBeNull();
+
+  fireEvent.press(getByText("Other Team"));
+
+  expect(getByText("TE2")).toBeTruthy();
 });
 
 const evaluateResponse = {
@@ -129,10 +141,12 @@ test("pressing your player then an opponent player opens the Workshop", async ()
   fetchLeague.mockResolvedValueOnce(board);
   fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
 
-  const { getByText, getAllByText, findByText } = render(
+  const { getByText, getAllByText, findByText, queryByText } = render(
     <LeagueBoard leagueId="12345" />
   );
   await waitFor(() => getByText("Bench RB"));
+  expect(queryByText("TE2")).toBeNull();
+  fireEvent.press(getByText("Other Team"));
 
   fireEvent.press(getByText("Bench RB"));
   fireEvent.press(getByText("TE2"));
@@ -152,10 +166,12 @@ test("pressing an opponent player then your player opens the same Workshop", asy
   fetchLeague.mockResolvedValueOnce(board);
   fetchEvaluate.mockResolvedValueOnce(evaluateResponse);
 
-  const { getByText, getAllByText, findByText } = render(
+  const { getByText, getAllByText, findByText, queryByText } = render(
     <LeagueBoard leagueId="12345" />
   );
-  await waitFor(() => getByText("TE2"));
+  await waitFor(() => getByText("Bench RB"));
+  expect(queryByText("TE2")).toBeNull();
+  fireEvent.press(getByText("Other Team"));
 
   fireEvent.press(getByText("TE2"));
   fireEvent.press(getByText("Bench RB"));
@@ -173,6 +189,7 @@ test("Clear selection dismisses the Workshop", async () => {
     <LeagueBoard leagueId="12345" />
   );
   await waitFor(() => getByText("Bench RB"));
+  fireEvent.press(getByText("Other Team"));
 
   fireEvent.press(getByText("Bench RB"));
   fireEvent.press(getByText("TE2"));
@@ -191,6 +208,7 @@ test("Copy pitch copies names, counterpart team, and deltas without cookies", as
 
   const { getByText, findByText } = render(<LeagueBoard leagueId="12345" />);
   await waitFor(() => getByText("Bench RB"));
+  fireEvent.press(getByText("Other Team"));
 
   fireEvent.press(getByText("Bench RB"));
   fireEvent.press(getByText("TE2"));

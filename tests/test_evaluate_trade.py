@@ -1,5 +1,14 @@
 from engine.trade import evaluate_trade, find_trades
-from tests.test_simulate_trade import PPR, SLOTS, surplus_rb_team, surplus_te_team
+from tests.test_simulate_trade import (
+    PPR,
+    SLOTS,
+    surplus_rb_team,
+    surplus_te_team,
+    _qb,
+    _rb,
+    _wr,
+    _te,
+)
 
 
 def test_evaluate_trade_returns_positive_deltas_when_both_improve():
@@ -58,3 +67,45 @@ def test_find_trades_caps_results():
     trades = find_trades(team_a, [{"players": team_b}], PPR, SLOTS, limit=1)
 
     assert len(trades) == 1
+
+
+def two_for_one_need_te_team():
+    return [
+        _qb("a-qb", 200),
+        _rb("a-rb1", 1000),
+        _rb("a-rb2", 900),
+        _rb("a-rb3", 800),
+        _wr("a-wr1", 80),
+        _wr("a-wr2", 50),
+        _te("a-te", 10),
+    ]
+
+
+def two_for_one_surplus_te_team():
+    return [
+        _qb("b-qb", 200),
+        _rb("b-rb1", 400),
+        _rb("b-rb2", 300),
+        _wr("b-wr1", 80),
+        _wr("b-wr2", 70),
+        _te("b-te1", 100),
+        _te("b-te2", 90),
+    ]
+
+
+def test_find_trades_two_for_one_returns_mutual_pair():
+    trades = find_trades(
+        two_for_one_need_te_team(),
+        [{"id": 2, "name": "Other Team", "players": two_for_one_surplus_te_team()}],
+        PPR,
+        SLOTS,
+        two_for_one=True,
+    )
+
+    match = next(
+        t
+        for t in trades
+        if " + " in t["send"] or " + " in t["receive"]
+    )
+    assert match["teamADelta"] > 0
+    assert match["teamBDelta"] > 0

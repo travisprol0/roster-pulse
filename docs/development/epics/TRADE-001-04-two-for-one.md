@@ -13,14 +13,16 @@ Optional search: you send two, receive one (or inverse), still only if both star
 
 ## Scope
 
-- [ ] Combinatorial evaluate with a tight cap (document N, e.g. top surplus players only).
-- [ ] UI: mode toggle 1-for-1 / 2-for-1; rows list two names on one side.
-- [ ] Mocked tests only; no live ESPN.
+- [x] Combinatorial evaluate with a tight cap (document N, e.g. top surplus players only).
+- [x] UI: mode toggle 1-for-1 / 2-for-1; rows list two names on one side.
+- [x] Mocked tests only; no live ESPN.
+
+N=6: top players per roster by ROS; 2-send-1-receive and inverse. Names joined with ` + `. `GET /api/trades/?mode=2for1`.
 
 ## Acceptance criteria
 
-- [ ] Pytest: a constructed surplus/need fixture yields at least one 2-for-1 with both deltas > 0.
-- [ ] 1-for-1 default path unchanged (existing `test_api` trade still passes).
+- [x] Pytest: a constructed surplus/need fixture yields at least one 2-for-1 with both deltas > 0.
+- [x] 1-for-1 default path unchanged (existing `test_api` trade still passes).
 
 ## Pipeline (mandatory)
 

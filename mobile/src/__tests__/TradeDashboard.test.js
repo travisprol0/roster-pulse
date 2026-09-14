@@ -261,3 +261,30 @@ test("sort toggle relabels and reorders fairness vs your gain", async () => {
   );
   expect(names).toEqual(["Greedy send", "Fair send"]);
 });
+
+test("2-for-1 mode lists two names on one side", async () => {
+  fetchTrades.mockResolvedValueOnce({ trades: [] });
+  fetchTrades.mockResolvedValueOnce({
+    trades: [
+      {
+        id: "2for1",
+        send: "Bench RB + WR2",
+        receive: "TE2",
+        teamBId: 2,
+        teamBName: "Other Team",
+        teamADelta: 4.0,
+        teamBDelta: 5.0,
+      },
+    ],
+  });
+
+  const { findByText, getByText } = render(<TradeDashboard leagueId="111" />);
+  expect(await findByText("No mutually beneficial trades.")).toBeTruthy();
+  expect(getByText("1-for-1")).toBeTruthy();
+
+  fireEvent.press(getByText("2-for-1"));
+
+  await waitFor(() => expect(fetchTrades).toHaveBeenCalledWith("111", "2for1"));
+  expect(await findByText("Bench RB + WR2")).toBeTruthy();
+  expect(getByText("TE2")).toBeTruthy();
+});

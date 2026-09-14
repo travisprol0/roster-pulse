@@ -207,7 +207,7 @@ def trades(request):
         for team in snapshot.teams
         if team.get("id") != mine.get("id")
     ]
-    return _json({"trades": find_trades(mine_players, others, PTS_SCORING, slots)})
+    return _json({"trades": find_trades(mine_players, others, PTS_SCORING, slots, two_for_one=request.GET.get("mode") == "2for1")})
 
 
 def _player_by_id(players, player_id):

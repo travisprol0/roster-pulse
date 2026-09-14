@@ -94,6 +94,7 @@ export default function TradeDashboard({ leagueId }) {
   const [opponentId, setOpponentId] = useState("all");
   const [position, setPosition] = useState("all");
   const [sort, setSort] = useState("fair");
+  const [mode, setMode] = useState("1for1");
 
   useEffect(() => {
     if (!leagueId) {
@@ -103,10 +104,13 @@ export default function TradeDashboard({ leagueId }) {
       setOpponentId("all");
       setPosition("all");
       setSort("fair");
+      setMode("1for1");
       return;
     }
     setLoading(true);
-    fetchTrades(leagueId)
+    const request =
+      mode === "2for1" ? fetchTrades(leagueId, "2for1") : fetchTrades(leagueId);
+    request
       .then((data) => {
         setTrades(data.trades);
         setSelected(null);
@@ -123,7 +127,7 @@ export default function TradeDashboard({ leagueId }) {
         setSort("fair");
         setLoading(false);
       });
-  }, [leagueId]);
+  }, [leagueId, mode]);
 
   if (loading) {
     return <ActivityIndicator testID="loading" />;
@@ -155,6 +159,14 @@ export default function TradeDashboard({ leagueId }) {
 
   return (
     <View style={styles.table}>
+      <View style={styles.filters}>
+        <Pressable onPress={() => setMode("1for1")}>
+          <Text onPress={() => setMode("1for1")}>1-for-1</Text>
+        </Pressable>
+        <Pressable onPress={() => setMode("2for1")}>
+          <Text onPress={() => setMode("2for1")}>2-for-1</Text>
+        </Pressable>
+      </View>
       <Pressable
         onPress={() => setSort((current) => (current === "fair" ? "you" : "fair"))}
       >

@@ -1,3 +1,6 @@
+from itertools import combinations
+
+
 def player_ros_points(player, scoring):
     stats = player.get("stats") or {}
     return sum(stats.get(stat, 0) * points for stat, points in scoring.items())
@@ -62,7 +65,44 @@ def simulate_trade(team_a, team_b, send_a, send_b, scoring, slots):
     return evaluate_trade(team_a, team_b, send_a, send_b, scoring, slots) is not None
 
 
-def find_trades(user_roster, other_teams, scoring, slots, limit=20):
+TWO_FOR_ONE_POOL = 6
+
+
+def _top_players(roster, scoring, limit=TWO_FOR_ONE_POOL):
+    return sorted(roster, key=lambda p: player_ros_points(p, scoring), reverse=True)[:limit]
+
+
+def _names(players):
+    return " + ".join(player["name"] for player in players)
+
+
+def _ids(players):
+    return "+".join(str(player["id"]) for player in players)
+
+
+def _append_trade(results, send_a, send_b, team_b_id, team_b_name, result, before_a, before_b):
+    results.append(
+        {
+            "id": f"{_ids(send_a)}-{_ids(send_b)}",
+            "send": _names(send_a),
+            "receive": _names(send_b),
+            "sendId": send_a[0]["id"] if len(send_a) == 1 else _ids(send_a),
+            "receiveId": send_b[0]["id"] if len(send_b) == 1 else _ids(send_b),
+            "sendPosition": send_a[0].get("position"),
+            "receivePosition": send_b[0].get("position"),
+            "teamBId": team_b_id,
+            "teamBName": team_b_name,
+            "teamADelta": result["team_a_delta"],
+            "teamBDelta": result["team_b_delta"],
+            "beforeA": before_a,
+            "afterA": before_a + result["team_a_delta"],
+            "beforeB": before_b,
+            "afterB": before_b + result["team_b_delta"],
+        }
+    )
+
+
+def find_trades(user_roster, other_teams, scoring, slots, limit=20, two_for_one=False):
     results = []
     for team in other_teams:
         is_team = isinstance(team, dict)
@@ -71,30 +111,40 @@ def find_trades(user_roster, other_teams, scoring, slots, limit=20):
         team_b_name = team.get("name") if is_team else None
         before_a = starting_ros(user_roster, scoring, slots)
         before_b = starting_ros(others, scoring, slots)
+        if two_for_one:
+            pool_a = _top_players(user_roster, scoring)
+            pool_b = _top_players(others, scoring)
+            pairs = []
+            for send_a in combinations(pool_a, 2):
+                for recv in pool_b:
+                    pairs.append((list(send_a), [recv]))
+            for send_a in pool_a:
+                for recv in combinations(pool_b, 2):
+                    pairs.append(([send_a], list(recv)))
+            for send_a, send_b in pairs:
+                result = evaluate_trade(
+                    user_roster, others, send_a, send_b, scoring, slots
+                )
+                if result:
+                    _append_trade(
+                        results, send_a, send_b, team_b_id, team_b_name, result, before_a, before_b
+                    )
+            continue
         for player_a in user_roster:
             for player_b in others:
                 result = evaluate_trade(
                     user_roster, others, [player_a], [player_b], scoring, slots
                 )
                 if result:
-                    results.append(
-                        {
-                            "id": f"{player_a['id']}-{player_b['id']}",
-                            "send": player_a["name"],
-                            "receive": player_b["name"],
-                            "sendId": player_a["id"],
-                            "receiveId": player_b["id"],
-                            "sendPosition": player_a.get("position"),
-                            "receivePosition": player_b.get("position"),
-                            "teamBId": team_b_id,
-                            "teamBName": team_b_name,
-                            "teamADelta": result["team_a_delta"],
-                            "teamBDelta": result["team_b_delta"],
-                            "beforeA": before_a,
-                            "afterA": before_a + result["team_a_delta"],
-                            "beforeB": before_b,
-                            "afterB": before_b + result["team_b_delta"],
-                        }
+                    _append_trade(
+                        results,
+                        [player_a],
+                        [player_b],
+                        team_b_id,
+                        team_b_name,
+                        result,
+                        before_a,
+                        before_b,
                     )
     results.sort(key=lambda trade: min(trade["teamADelta"], trade["teamBDelta"]), reverse=True)
     return results[:limit]
