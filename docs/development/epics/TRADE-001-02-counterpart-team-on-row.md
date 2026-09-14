@@ -13,13 +13,13 @@ Every suggested-trade row shows the other team’s name. Today the table is send
 
 ## Scope
 
-- [ ] API includes `teamBName` (and id) on each trade if not already from USE-001-02.
-- [ ] Dashboard column **Them** (or equivalent) visible without opening detail.
+- [x] API includes `teamBName` (and id) on each trade if not already from USE-001-02.
+- [x] Dashboard column **Them** (or equivalent) visible without opening detail.
 
 ## Acceptance criteria
 
-- [ ] Pytest: seeded two-team league; TE2 trade row has Other Team (fixture name).
-- [ ] Jest: getByText counterpart name on the list.
+- [x] Pytest: seeded two-team league; TE2 trade row has Other Team (fixture name).
+- [x] Jest: getByText counterpart name on the list.
 
 ## Pipeline (mandatory)
 
