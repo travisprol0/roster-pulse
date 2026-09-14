@@ -21,11 +21,11 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | ----- | ---- | ----------- | ----------- | ----- |
 | **USE-001** | 5 | 0 | 0 | 5 |
 | **TRADE-001** | 4 | 0 | 0 | 4 |
-| **BOARD-001** | 0 | 0 | 4 | 4 |
+| **BOARD-001** | 1 | 0 | 3 | 4 |
 | **LINE-001** | 0 | 0 | 2 | 2 |
 | **SYNC-001** | 0 | 0 | 3 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 9 | 0 | 11 | 20 |
+| **All tickets** | 10 | 0 | 10 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -64,7 +64,7 @@ Source: [BOARD-001-league-intel-query.md](BOARD-001-league-intel-query.md)
 
 | Status | ID | Title | Notes |
 | ------ | -- | ----- | ----- |
-| Not started | BOARD-001-01 | Collapse / expand teams | Display of all teams already ships |
+| Done | BOARD-001-01 | Collapse / expand teams | UI-only; yours expanded, others collapsed until header press. |
 | Not started | BOARD-001-02 | Search players | — |
 | Not started | BOARD-001-03 | Sort a roster | — |
 | Not started | BOARD-001-04 | Positional surplus / need | — |

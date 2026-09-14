@@ -71,12 +71,20 @@ function Workshop({ trade, onClear }) {
 }
 
 function TeamCard({ team, onPlayerPress }) {
+  const [expanded, setExpanded] = useState(Boolean(team.isYou));
+
+  function toggle() {
+    setExpanded((current) => !current);
+  }
+
   return (
     <View testID={`team-${team.id}`} style={[styles.card, team.isYou && styles.cardYou]}>
-      <View style={styles.teamHead}>
-        <Text style={styles.teamName}>{team.name}</Text>
+      <Pressable onPress={toggle} style={styles.teamHead}>
+        <Text onPress={toggle} style={styles.teamName}>
+          {team.name}
+        </Text>
         {team.isYou ? <Text style={styles.youBadge}>You</Text> : null}
-      </View>
+      </Pressable>
       <View style={styles.standings}>
         <Text style={styles.meta}>{recordText(team.record)}</Text>
         <Text style={styles.meta}>PF {team.pointsFor}</Text>
@@ -84,16 +92,18 @@ function TeamCard({ team, onPlayerPress }) {
         {team.playoffSeed != null ? <Text style={styles.meta}>Seed {team.playoffSeed}</Text> : null}
         {team.waiverRank != null ? <Text style={styles.meta}>Waivers {team.waiverRank}</Text> : null}
       </View>
-      <View style={styles.table}>
-        <PlayerHeader />
-        {team.players.map((player) => (
-          <PlayerRow
-            key={String(player.id)}
-            player={player}
-            onPress={() => onPlayerPress(player, team.isYou)}
-          />
-        ))}
-      </View>
+      {expanded ? (
+        <View style={styles.table}>
+          <PlayerHeader />
+          {team.players.map((player) => (
+            <PlayerRow
+              key={String(player.id)}
+              player={player}
+              onPress={() => onPlayerPress(player, team.isYou)}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }

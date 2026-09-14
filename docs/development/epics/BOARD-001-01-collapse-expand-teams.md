@@ -13,13 +13,13 @@ Each team card collapses to header + standings. Yours stays expanded by default;
 
 ## Scope
 
-- [ ] Press team header toggles roster table.
-- [ ] `isYou` team expanded on first load.
-- [ ] Note: display of all teams already exists; this ticket is interaction only.
+- [x] Press team header toggles roster table.
+- [x] `isYou` team expanded on first load.
+- [x] Note: display of all teams already exists; this ticket is interaction only.
 
 ## Acceptance criteria
 
-- [ ] Jest: other team’s player name hidden until expand; your player visible.
+- [x] Jest: other team’s player name hidden until expand; your player visible.
 
 ## Pipeline (mandatory)
 
