@@ -13,14 +13,14 @@ Lock UI terms and v1 actions so later tickets implement one contract.
 
 ## Scope
 
-- [ ] Document **Board**, **Suggested trade**, **Workshop**, **Pitch**.
-- [ ] Document: click suggestion → detail; pick two players → evaluate (show deltas even if not mutual); copy pitch; no ESPN write.
-- [ ] Document settings recede after a successful sync (05).
+- [x] Document **Board**, **Suggested trade**, **Workshop**, **Pitch**.
+- [x] Document: click suggestion → detail; pick two players → evaluate (show deltas even if not mutual); copy pitch; no ESPN write.
+- [x] Document settings recede after a successful sync (05).
 
 ## Acceptance criteria
 
-- [ ] Parent epic **Locked architecture** is unambiguous for implementers.
-- [ ] No user-facing Help site required (this repo has no Sphinx user guide).
+- [x] Parent epic **Locked architecture** is unambiguous for implementers.
+- [x] No user-facing Help site required (this repo has no Sphinx user guide).
 
 ## Pipeline (mandatory)
 

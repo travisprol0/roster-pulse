@@ -1,6 +1,6 @@
 # Epic progress tracker
 
-**Last updated:** 2026-09-14 (backlog created; no implementation tickets closed)
+**Last updated:** 2026-09-14
 
 Living status for [epic tickets](README.md). Update this file whenever epic ticket work lands.
 
@@ -19,13 +19,13 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 
 | Track | Done | In progress | Not started | Total |
 | ----- | ---- | ----------- | ----------- | ----- |
-| **USE-001** | 0 | 0 | 5 | 5 |
+| **USE-001** | 1 | 0 | 4 | 5 |
 | **TRADE-001** | 0 | 0 | 4 | 4 |
 | **BOARD-001** | 0 | 0 | 4 | 4 |
 | **LINE-001** | 0 | 0 | 2 | 2 |
 | **SYNC-001** | 0 | 0 | 3 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 0 | 0 | 20 | 20 |
+| **All tickets** | 1 | 0 | 19 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -37,7 +37,7 @@ Source: [USE-001-usable-after-load.md](USE-001-usable-after-load.md)
 
 | Status | ID | Title | Notes |
 | ------ | -- | ----- | ----- |
-| Not started | USE-001-01 | Product contract | — |
+| Done | USE-001-01 | Product contract | Docs-only; Locked architecture in USE-001. No JSON/UI. |
 | Not started | USE-001-02 | Trade detail sheet | — |
 | Not started | USE-001-03 | Custom 1-for-1 evaluate | — |
 | Not started | USE-001-04 | Copy pitch | — |
