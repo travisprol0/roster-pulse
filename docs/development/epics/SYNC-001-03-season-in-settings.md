@@ -13,14 +13,14 @@ User can set season on the form. Backend already reads `body.season` or `DEFAULT
 
 ## Scope
 
-- [ ] Season field on each league block or once for the submit payload.
-- [ ] `saveEspnCredentials` sends `season`.
-- [ ] Placeholder/default 2026 until changed.
+- [x] Season field on each league block or once for the submit payload.
+- [x] `saveEspnCredentials` sends `season`.
+- [x] Placeholder/default 2026 until changed.
 
 ## Acceptance criteria
 
-- [ ] Jest: change season; Submit payload includes `season: 2025` (or chosen year).
-- [ ] Existing credentials tests still pass if default omitted (server default).
+- [x] Jest: change season; Submit payload includes `season: 2025` (or chosen year).
+- [x] Existing credentials tests still pass if default omitted (server default).
 
 ## Pipeline (mandatory)
 

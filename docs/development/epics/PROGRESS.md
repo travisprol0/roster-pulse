@@ -23,9 +23,9 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | **TRADE-001** | 4 | 0 | 0 | 4 |
 | **BOARD-001** | 4 | 0 | 0 | 4 |
 | **LINE-001** | 2 | 0 | 0 | 2 |
-| **SYNC-001** | 2 | 0 | 1 | 3 |
+| **SYNC-001** | 3 | 0 | 0 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 17 | 0 | 3 | 20 |
+| **All tickets** | 18 | 0 | 2 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -90,7 +90,7 @@ Source: [SYNC-001-trust-the-data.md](SYNC-001-trust-the-data.md)
 | ------ | -- | ----- | ----- |
 | Done | SYNC-001-01 | Refresh + last-synced | `POST /api/league/refresh/` + `fetchedAt` on GET board; Refresh shows ISO. |
 | Done | SYNC-001-02 | Visible sync errors | Settings: unauthorized copy; Board `error` when SWID misses with teams. |
-| Not started | SYNC-001-03 | Season in settings | Server default 2026 already |
+| Done | SYNC-001-03 | Season in settings | UI-only; API already accepted `season`. One field, default 2026; invalid ignored. |
 
 ---
 

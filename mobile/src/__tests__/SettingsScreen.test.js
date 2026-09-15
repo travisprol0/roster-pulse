@@ -16,6 +16,7 @@ test("shows a league block with league id and both cookies", () => {
   expect(getByText("League ID")).toBeTruthy();
   expect(getByText("espn_s2")).toBeTruthy();
   expect(getByText("SWID")).toBeTruthy();
+  expect(getByPlaceholderText("2026")).toBeTruthy();
 });
 
 test("collapses cookie fields when saved leagues exist until Leagues / cookies is pressed", () => {
@@ -62,10 +63,26 @@ test("submitting two league blocks sends cookies per league", () => {
 
   expect(saveEspnCredentials).toHaveBeenCalledTimes(1);
   expect(saveEspnCredentials).toHaveBeenCalledWith({
+    season: 2026,
     leagues: [
       { leagueId: "111", espn_s2: "s2-a", swid: "{A}" },
       { leagueId: "222", espn_s2: "s2-b", swid: "{B}" },
     ],
+  });
+});
+
+test("Submit payload includes the chosen season", () => {
+  const { getByPlaceholderText, getByText } = render(<SettingsScreen />);
+
+  fireEvent.changeText(getByPlaceholderText("League ID 1"), "111");
+  fireEvent.changeText(getByPlaceholderText("espn_s2"), "s2-a");
+  fireEvent.changeText(getByPlaceholderText("swid"), "{A}");
+  fireEvent.changeText(getByPlaceholderText("2026"), "2025");
+  fireEvent.press(getByText("Submit"));
+
+  expect(saveEspnCredentials).toHaveBeenCalledWith({
+    season: 2025,
+    leagues: [{ leagueId: "111", espn_s2: "s2-a", swid: "{A}" }],
   });
 });
 

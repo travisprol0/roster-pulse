@@ -11,6 +11,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
   const [leagues, setLeagues] = useState([emptyLeague()]);
   const [expanded, setExpanded] = useState(savedLeagues.length === 0);
   const [syncError, setSyncError] = useState("");
+  const [season, setSeason] = useState("2026");
 
   useEffect(() => {
     setExpanded(savedLeagues.length === 0);
@@ -52,7 +53,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
       }),
     }).catch(() => {});
     // #endregion
-    saveEspnCredentials({ leagues })
+    saveEspnCredentials({ leagues, season: Number(season) || 2026 })
       .then(async (response) => {
         // #region agent log
         fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
@@ -112,6 +113,14 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
       {syncError ? <Text>{syncError}</Text> : null}
       {expanded ? (
         <>
+          <Text style={styles.label}>Season</Text>
+          <TextInput
+            placeholder="2026"
+            value={season}
+            onChangeText={setSeason}
+            keyboardType="number-pad"
+            style={styles.input}
+          />
           {leagues.map((league, index) => (
             <View key={index} style={styles.block}>
               <Text style={styles.heading}>League {index + 1}</Text>
