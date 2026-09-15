@@ -310,6 +310,46 @@ def test_evaluate_endpoint_lopsided_pair_returns_numeric_deltas(client):
 
 
 @pytest.mark.django_db
+@patch("espn.client.requests.get", side_effect=_settings_and_roster_get)
+def test_post_league_refresh_syncs_snapshot_and_returns_fetched_at(mock_get, client):
+    _seed_league()
+    before = RosterSnapshot.objects.get().fetched_at
+
+    response = client.post(
+        "/api/league/refresh/",
+        data=json.dumps({"league_id": LEAGUE_ID}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["fetchedAt"]
+    snapshot = RosterSnapshot.objects.get()
+    assert snapshot.teams[0]["name"] == "Test Team"
+    assert snapshot.fetched_at >= before
+    assert mock_get.called
+
+
+@pytest.mark.django_db
+def test_post_league_refresh_404_without_account(client):
+    response = client.post(
+        "/api/league/refresh/",
+        data=json.dumps({"league_id": LEAGUE_ID}),
+        content_type="application/json",
+    )
+    assert response.status_code == 404
+    assert response.json()["error"] == "not found"
+
+
+@pytest.mark.django_db
+def test_league_endpoint_includes_fetched_at(client):
+    _seed_league()
+    response = client.get(f"/api/league/?league_id={LEAGUE_ID}")
+    assert response.status_code == 200
+    assert response.json()["fetchedAt"]
+
+
+@pytest.mark.django_db
 def test_evaluate_endpoint_400_when_players_not_on_the_two_teams(client):
     _seed_league()
     missing = client.get(

@@ -1,6 +1,6 @@
 # Epic progress tracker
 
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-15
 
 Living status for [epic tickets](README.md). Update this file whenever epic ticket work lands.
 
@@ -23,9 +23,9 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | **TRADE-001** | 4 | 0 | 0 | 4 |
 | **BOARD-001** | 4 | 0 | 0 | 4 |
 | **LINE-001** | 2 | 0 | 0 | 2 |
-| **SYNC-001** | 0 | 0 | 3 | 3 |
+| **SYNC-001** | 1 | 0 | 2 | 3 |
 | **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 15 | 0 | 5 | 20 |
+| **All tickets** | 16 | 0 | 4 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -88,7 +88,7 @@ Source: [SYNC-001-trust-the-data.md](SYNC-001-trust-the-data.md)
 
 | Status | ID | Title | Notes |
 | ------ | -- | ----- | ----- |
-| Not started | SYNC-001-01 | Refresh + last-synced | Submit-to-sync already ships |
+| Done | SYNC-001-01 | Refresh + last-synced | `POST /api/league/refresh/` + `fetchedAt` on GET board; Refresh shows ISO. |
 | Not started | SYNC-001-02 | Visible sync errors | — |
 | Not started | SYNC-001-03 | Season in settings | Server default 2026 already |
 

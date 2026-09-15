@@ -26,9 +26,71 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
   }
 
   function onSubmit() {
-    saveEspnCredentials({ leagues }).then(() => {
-      onSaved?.();
-    });
+    // #region agent log
+    fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "1de000",
+      },
+      body: JSON.stringify({
+        sessionId: "1de000",
+        hypothesisId: "A",
+        location: "SettingsScreen.js:onSubmit",
+        message: "submit pressed",
+        data: {
+          expanded,
+          rowCount: leagues.length,
+          fields: leagues.map((row) => ({
+            leagueIdLen: (row.leagueId || "").trim().length,
+            espnLen: (row.espn_s2 || "").trim().length,
+            swidLen: (row.swid || "").trim().length,
+          })),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    saveEspnCredentials({ leagues })
+      .then((response) => {
+        // #region agent log
+        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "1de000",
+          },
+          body: JSON.stringify({
+            sessionId: "1de000",
+            hypothesisId: "B",
+            location: "SettingsScreen.js:onSubmit.then",
+            message: "saveEspnCredentials settled",
+            data: { ok: response?.ok, status: response?.status },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        onSaved?.();
+      })
+      .catch((err) => {
+        // #region agent log
+        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "1de000",
+          },
+          body: JSON.stringify({
+            sessionId: "1de000",
+            hypothesisId: "B",
+            location: "SettingsScreen.js:onSubmit.catch",
+            message: "saveEspnCredentials rejected",
+            data: { name: err?.name, text: String(err) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+      });
   }
 
   return (

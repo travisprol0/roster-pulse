@@ -1,0 +1,5 @@
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 3, "completeCount": 2, "leagueIdLens": [5, 3, 0]}, "timestamp": 1789473843254}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "sync ok", "data": {"leagueId": 12345, "accountId": 1}, "timestamp": 1789473843261}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "unauthorized", "data": {"leagueId": 222}, "timestamp": 1789473843262}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 1, "completeCount": 0, "leagueIdLens": [0]}, "timestamp": 1789473843267}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "400 no complete leagues", "data": {}, "timestamp": 1789473843267}

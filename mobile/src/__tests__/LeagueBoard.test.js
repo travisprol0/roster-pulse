@@ -1,12 +1,13 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
-import { fetchLeague } from "../api/league";
+import { fetchLeague, refreshLeague } from "../api/league";
 import { copyText } from "../clipboard";
 import LeagueBoard from "../screens/LeagueBoard";
 
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(() => Promise.resolve({ youTeamId: null, teams: [] })),
+  refreshLeague: jest.fn(() => Promise.resolve({ fetchedAt: "2026-09-15T12:00:00Z" })),
 }));
 
 jest.mock("../api/evaluate", () => ({
@@ -334,6 +335,31 @@ test("surplus need strip is visible on team cards", async () => {
   expect(getByText("TE+")).toBeTruthy();
   expect(getByText("RB+")).toBeTruthy();
   expect(getByText("RB-")).toBeTruthy();
+});
+
+test("Refresh press calls the refresh API helper", async () => {
+  fetchLeague.mockResolvedValueOnce({
+    ...board,
+    fetchedAt: "2026-09-15T12:00:00Z",
+  });
+  refreshLeague.mockResolvedValueOnce({ fetchedAt: "2026-09-15T13:00:00Z" });
+
+  const { getByText, findByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("User Team")).toBeTruthy();
+
+  fireEvent.press(getByText("Refresh"));
+
+  expect(refreshLeague).toHaveBeenCalledWith("12345");
+});
+
+test("shows last synced time from fetchedAt", async () => {
+  fetchLeague.mockResolvedValueOnce({
+    ...board,
+    fetchedAt: "2026-09-15T12:00:00Z",
+  });
+
+  const { findByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("2026-09-15T12:00:00Z")).toBeTruthy();
 });
 
 test("injured starter row is marked and healthy row is not", async () => {

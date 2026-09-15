@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
-import { fetchLeague } from "../api/league";
+import { fetchLeague, refreshLeague } from "../api/league";
 import { copyText } from "../clipboard";
 
 function formatDelta(delta) {
@@ -170,6 +170,7 @@ export default function LeagueBoard({ leagueId }) {
   const [workshop, setWorkshop] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("slot");
+  const [fetchedAt, setFetchedAt] = useState("");
 
   useEffect(() => {
     if (!leagueId) {
@@ -180,6 +181,7 @@ export default function LeagueBoard({ leagueId }) {
       setWorkshop(null);
       setQuery("");
       setSort("slot");
+      setFetchedAt("");
       return;
     }
     setLoading(true);
@@ -191,6 +193,7 @@ export default function LeagueBoard({ leagueId }) {
         setWorkshop(null);
         setQuery("");
         setSort("slot");
+        setFetchedAt(data.fetchedAt || "");
         setLoading(false);
       })
       .catch(() => {
@@ -200,6 +203,7 @@ export default function LeagueBoard({ leagueId }) {
         setWorkshop(null);
         setQuery("");
         setSort("slot");
+        setFetchedAt("");
         setLoading(false);
       });
   }, [leagueId]);
@@ -266,6 +270,10 @@ export default function LeagueBoard({ leagueId }) {
       <Pressable onPress={cycleSort}>
         <Text onPress={cycleSort}>{sortLabel}</Text>
       </Pressable>
+      <Pressable onPress={() => refreshLeague(leagueId)}>
+        <Text onPress={() => refreshLeague(leagueId)}>Refresh</Text>
+      </Pressable>
+      {fetchedAt ? <Text>{fetchedAt}</Text> : null}
       {workshop ? (
         <Workshop trade={workshop} onClear={clearSelection} />
       ) : null}

@@ -41,15 +41,51 @@ def _complete_league(row):
 
 @csrf_exempt
 def espn_credentials(request):
+    def _dbg(message, data, hid="E"):
+        import time
+        try:
+            with open(
+                "/home/travis-prol/Documents/projects/roster-pulse/.cursor/debug-1de000.log",
+                "a",
+                encoding="utf-8",
+            ) as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "sessionId": "1de000",
+                            "hypothesisId": hid,
+                            "location": "config/views.py:espn_credentials",
+                            "message": message,
+                            "data": data,
+                            "timestamp": int(time.time() * 1000),
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+
     if request.method == "OPTIONS":
+        _dbg("OPTIONS", {"path": request.path})
         return _json({})
     if request.method != "POST":
+        _dbg("method not POST", {"method": request.method})
         return _json({"error": "method not allowed"}, status=405)
 
     body = json.loads(request.body or b"{}")
+    rows = body.get("leagues") or []
+    complete = [row for row in (_complete_league(r) for r in rows) if row]
+    _dbg(
+        "POST parsed",
+        {
+            "rowCount": len(rows),
+            "completeCount": len(complete),
+            "leagueIdLens": [len(str(r.get("leagueId") or "").strip()) for r in rows],
+        },
+    )
     season = body.get("season") or DEFAULT_SEASON
-    complete = [row for row in (_complete_league(r) for r in body.get("leagues") or []) if row]
     if not complete:
+        _dbg("400 no complete leagues", {})
         return _json({"error": "no complete leagues"}, status=400)
 
     results = []
@@ -58,6 +94,7 @@ def espn_credentials(request):
         try:
             sync_league(client)
         except EspnUnauthorizedError:
+            _dbg("unauthorized", {"leagueId": row["leagueId"]})
             results.append(
                 {
                     "league_id": row["leagueId"],
@@ -66,7 +103,11 @@ def espn_credentials(request):
                 }
             )
             continue
+        except Exception as err:
+            _dbg("sync exception", {"type": type(err).__name__, "text": str(err)[:200]})
+            raise
         account = EspnAccount.objects.get(espn_s2=row["espn_s2"], swid=row["swid"])
+        _dbg("sync ok", {"leagueId": row["leagueId"], "accountId": account.id})
         results.append(
             {
                 "league_id": row["leagueId"],
@@ -229,7 +270,36 @@ def league(request):
             team["name"],
         )
     )
-    return _json({"youTeamId": you_id, "teams": teams})
+    return _json(
+        {"youTeamId": you_id, "teams": teams, "fetchedAt": snapshot.fetched_at}
+    )
+
+
+@csrf_exempt
+def league_refresh(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    if request.method != "POST":
+        return _json({"error": "method not allowed"}, status=405)
+    body = json.loads(request.body or b"{}")
+    league_id = body.get("league_id")
+    if not league_id:
+        return _json({"error": "not found"}, status=404)
+    settings = (
+        LeagueSettings.objects.filter(espn_league_id=int(league_id))
+        .order_by("-season")
+        .select_related("account")
+        .first()
+    )
+    if not settings:
+        return _json({"error": "not found"}, status=404)
+    account = settings.account
+    client = EspnFantasyClient(
+        account.espn_s2, account.swid, int(league_id), settings.season
+    )
+    sync_league(client)
+    snapshot = _snapshot(league_id)
+    return _json({"fetchedAt": snapshot.fetched_at})
 
 
 @csrf_exempt

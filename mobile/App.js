@@ -17,16 +17,53 @@ export default function App() {
   const [leagueId, setLeagueId] = useState(null);
 
   function loadLeagues() {
-    return fetchLeagues().then((data) => {
-      const next = data.leagues || [];
-      setLeagues(next);
-      setLeagueId((current) => {
-        if (current && next.some((league) => league.id === current)) {
-          return current;
-        }
-        return next[0] ? next[0].id : null;
+    return fetchLeagues()
+      .then((data) => {
+        const next = data.leagues || [];
+        // #region agent log
+        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "1de000",
+          },
+          body: JSON.stringify({
+            sessionId: "1de000",
+            hypothesisId: "D",
+            location: "App.js:loadLeagues",
+            message: "leagues loaded",
+            data: { count: next.length, ids: next.map((row) => row.id) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        setLeagues(next);
+        setLeagueId((current) => {
+          if (current && next.some((league) => league.id === current)) {
+            return current;
+          }
+          return next[0] ? next[0].id : null;
+        });
+      })
+      .catch((err) => {
+        // #region agent log
+        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "1de000",
+          },
+          body: JSON.stringify({
+            sessionId: "1de000",
+            hypothesisId: "D",
+            location: "App.js:loadLeagues.catch",
+            message: "fetchLeagues rejected",
+            data: { text: String(err) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
       });
-    });
   }
 
   useEffect(() => {

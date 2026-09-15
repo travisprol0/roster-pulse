@@ -13,14 +13,14 @@ Refresh the selected league from ESPN using stored cookies; show `fetched_at` on
 
 ## Scope
 
-- [ ] `POST /api/league/refresh/` (or similar) with `league_id`; runs `sync_league`; returns board or `{fetchedAt}`.
-- [ ] **Refresh** control; display last synced (ISO or locale string).
-- [ ] Mock ESPN in pytest.
+- [x] `POST /api/league/refresh/` (or similar) with `league_id`; runs `sync_league`; returns board or `{fetchedAt}`.
+- [x] **Refresh** control; display last synced (ISO or locale string).
+- [x] Mock ESPN in pytest.
 
 ## Acceptance criteria
 
-- [ ] Pytest: refresh calls client fetch (mocked) and updates snapshot.
-- [ ] Jest: Refresh press calls the API helper.
+- [x] Pytest: refresh calls client fetch (mocked) and updates snapshot.
+- [x] Jest: Refresh press calls the API helper.
 
 ## Pipeline (mandatory)
 
