@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { copyText } from "../clipboard";
 import { fetchTrades } from "../api/trades";
 import TradeDashboard from "../screens/TradeDashboard";
+import { useWindowWidth } from "../useWindowWidth";
 
 jest.mock("../api/trades", () => ({
   fetchTrades: jest.fn(),
@@ -12,6 +13,10 @@ jest.mock("../api/evaluate", () => ({
   proposeTrade: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
+jest.mock("../useWindowWidth", () => ({
+  useWindowWidth: jest.fn(() => 400),
+}));
+
 jest.mock(
   "../clipboard",
   () => ({
@@ -19,6 +24,10 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+beforeEach(() => {
+  useWindowWidth.mockReturnValue(400);
+});
 
 const mockResponse = {
   trades: [
@@ -54,6 +63,7 @@ test("renders proposed trades from the mock JSON response", async () => {
   const { findByText, getByText } = render(<TradeDashboard leagueId="111" />);
 
   expect(await findByText("Bench RB")).toBeTruthy();
+  expect(getByText("Trade ideas")).toBeTruthy();
   expect(getByText("You send")).toBeTruthy();
   expect(getByText("You receive")).toBeTruthy();
   expect(getByText("Your delta")).toBeTruthy();
@@ -98,10 +108,10 @@ test("shows empty state when no league is selected", () => {
   expect(getByText("Add a league in settings, then pick it here.")).toBeTruthy();
 });
 
-test("pressing a suggested trade opens the Workshop with counterpart and totals", async () => {
+test("pressing a suggested trade opens the structured Workshop with counterpart and totals", async () => {
   fetchTrades.mockResolvedValue(mockResponse);
 
-  const { findByText, getByText, queryByText } = render(
+  const { findByText, getByTestId, getByText, queryByText } = render(
     <TradeDashboard leagueId="111" />
   );
 
@@ -117,6 +127,10 @@ test("pressing a suggested trade opens the Workshop with counterpart and totals"
   expect(getByText("480")).toBeTruthy();
   expect(getByText("483.1")).toBeTruthy();
   expect(queryByText("You send")).toBeTruthy();
+  expect(getByTestId("workshop-send")).toBeTruthy();
+  expect(getByTestId("workshop-receive")).toBeTruthy();
+  expect(getByTestId("workshop-impact")).toBeTruthy();
+  expect(getByTestId("workshop-actions")).toBeTruthy();
 });
 
 test("dismissing the Workshop returns to the suggested trade list", async () => {
@@ -223,6 +237,31 @@ test("position filter keeps rows where send or receive matches", async () => {
   expect(queryByText("Weak TE")).toBeNull();
 });
 
+test("mode and filters expose their selected states", async () => {
+  fetchTrades.mockResolvedValue(twoTeamResponse);
+
+  const { findByText, getByTestId } = render(
+    <TradeDashboard leagueId="111" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  expect(getByTestId("mode-1for1").props.accessibilityState.selected).toBe(true);
+  expect(getByTestId("mode-2for1").props.accessibilityState.selected).toBe(false);
+  expect(
+    getByTestId("filter-opponent-all").props.accessibilityState.selected
+  ).toBe(true);
+
+  fireEvent.press(getByTestId("filter-opponent-3"));
+  fireEvent.press(getByTestId("filter-position-RB"));
+
+  expect(
+    getByTestId("filter-opponent-3").props.accessibilityState.selected
+  ).toBe(true);
+  expect(
+    getByTestId("filter-position-RB").props.accessibilityState.selected
+  ).toBe(true);
+});
+
 test("sort toggle relabels and reorders fairness vs your gain", async () => {
   fetchTrades.mockResolvedValue({
     trades: [
@@ -291,4 +330,21 @@ test("2-for-1 mode lists two names on one side", async () => {
   await waitFor(() => expect(fetchTrades).toHaveBeenCalledWith("111", "2for1"));
   expect(await findByText("Bench RB + WR2")).toBeTruthy();
   expect(getByText("TE2")).toBeTruthy();
+});
+
+test("uses trade cards on phones and a data table at desktop width", async () => {
+  fetchTrades.mockResolvedValue(mockResponse);
+  const { findByText, getByTestId, queryByTestId, rerender } = render(
+    <TradeDashboard leagueId="111" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  expect(getByTestId("trade-cards")).toBeTruthy();
+  expect(queryByTestId("trade-table")).toBeNull();
+
+  useWindowWidth.mockReturnValue(1200);
+  rerender(<TradeDashboard leagueId="111" />);
+
+  expect(getByTestId("trade-table")).toBeTruthy();
+  expect(queryByTestId("trade-cards")).toBeNull();
 });

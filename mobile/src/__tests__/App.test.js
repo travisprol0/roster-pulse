@@ -6,6 +6,7 @@ import { fetchLeague } from "../api/league";
 import { fetchLeagues } from "../api/leagues";
 import { fetchTrades } from "../api/trades";
 import { isDesktopWidth } from "../layout";
+import { colors } from "../ui/theme";
 import { useWindowWidth } from "../useWindowWidth";
 
 jest.mock("../api/espnCredentials", () => ({
@@ -70,7 +71,7 @@ test("shows settings, loads switcher leagues, and fetches trades by league id", 
   await waitFor(() => expect(fetchTrades).toHaveBeenCalledWith("111"));
 });
 
-test("cookie fields stay collapsed until Leagues / cookies is expanded", async () => {
+test("league fields stay collapsed until Leagues is expanded", async () => {
   mockLeagues();
   useWindowWidth.mockReturnValue(400);
 
@@ -79,7 +80,7 @@ test("cookie fields stay collapsed until Leagues / cookies is expanded", async (
   await findByText("League A");
 
   expect(queryByPlaceholderText("League ID 1")).toBeNull();
-  fireEvent.press(getByText("Leagues / cookies"));
+  fireEvent.press(getByText("Leagues"));
   expect(getByPlaceholderText("League ID 1")).toBeTruthy();
 });
 
@@ -124,7 +125,28 @@ test("page scrolls and settings buttons still press", async () => {
   await findByText("League A");
 
   expect(getByTestId("app-scroll").type).toBe("RCTScrollView");
-  fireEvent.press(getByText("Leagues / cookies"));
+  expect(
+    StyleSheet.flatten(getByTestId("app-scroll").props.style).backgroundColor
+  ).toBe(colors.canvas);
+  fireEvent.press(getByText("Leagues"));
   fireEvent.press(getByText("Add league"));
   expect(getByText("League 2")).toBeTruthy();
+});
+
+test("announces an API load error and retries it", async () => {
+  fetchLeagues.mockClear();
+  fetchLeagues
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValueOnce({ leagues: [] });
+
+  const { findByPlaceholderText, findByRole, getByText, queryByRole } = render(
+    <App />
+  );
+
+  expect(await findByRole("alert")).toBeTruthy();
+  fireEvent.press(getByText("Retry"));
+
+  expect(await findByPlaceholderText("League ID 1")).toBeTruthy();
+  await waitFor(() => expect(queryByRole("alert")).toBeNull());
+  await waitFor(() => expect(fetchLeagues).toHaveBeenCalledTimes(2));
 });

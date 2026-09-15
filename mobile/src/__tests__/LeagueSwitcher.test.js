@@ -26,6 +26,8 @@ test("pressing League B selects by id and marks it selected", () => {
   expect(getByTestId("league-tab-222").props.accessibilityState.selected).toBe(
     true
   );
+  expect(getByTestId("league-tab-222").props.accessibilityRole).toBe("tab");
+  expect(getByTestId("league-tab-222").props.accessibilityLabel).toBe("League B");
   expect(getByTestId("league-tab-111").props.accessibilityState.selected).toBe(
     false
   );

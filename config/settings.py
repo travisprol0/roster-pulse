@@ -75,8 +75,58 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "roster"),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "OPTIONS": {
+            "connect_timeout": 5,
+        },
     }
 }
+
+# #region agent log
+def _agent_debug_log(hypothesis_id, location, message, data):
+    import json
+    import time
+
+    try:
+        with open(
+            "/home/travis-prol/Documents/projects/roster-pulse/.cursor/debug-2ecd72.log",
+            "a",
+            encoding="utf-8",
+        ) as handle:
+            handle.write(
+                json.dumps(
+                    {
+                        "sessionId": "2ecd72",
+                        "runId": "run1",
+                        "hypothesisId": hypothesis_id,
+                        "location": location,
+                        "message": message,
+                        "data": data,
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+
+
+_agent_debug_log(
+    "A",
+    "config/settings.py:DATABASES",
+    "django database target",
+    {
+        "host": DATABASES["default"]["HOST"],
+        "port": str(DATABASES["default"]["PORT"]),
+        "name": DATABASES["default"]["NAME"],
+        "user": DATABASES["default"]["USER"],
+        "env_host": os.environ.get("POSTGRES_HOST"),
+        "env_port": os.environ.get("POSTGRES_PORT"),
+        "env_name": os.environ.get("POSTGRES_DB"),
+        "pid": os.getpid(),
+        "run_main": os.environ.get("RUN_MAIN"),
+    },
+)
+# #endregion
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -104,3 +154,6 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+ESPN_S2 = os.environ.get("ESPN_S2", "")
+ESPN_SWID = os.environ.get("ESPN_SWID", "")

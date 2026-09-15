@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,10 +10,31 @@ import {
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague, refreshLeague, setLineup } from "../api/league";
 import { claimWaiver, fetchWaivers } from "../api/waivers";
+import { isDataTableWidth } from "../layout";
+import {
+  ActionButton,
+  Card,
+  Chip,
+  EmptyState,
+  InlineBanner,
+  LoadingState,
+  SectionHeader,
+  StatPill,
+} from "../ui/primitives";
+import { colors, radii, spacing, typography } from "../ui/theme";
+import { useWindowWidth } from "../useWindowWidth";
 import Workshop from "./Workshop";
 
 function recordText(record) {
   return `${record.wins}-${record.losses}-${record.ties}`;
+}
+
+function displayNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "—";
+  }
+  return String(Number(number.toFixed(1)));
 }
 
 function PlayerHeader() {
@@ -46,30 +65,134 @@ function isInjuredStarter(player) {
   );
 }
 
-function PlayerRow({ player, onPress, showLineup }) {
-  let lineup = null;
-  if (showLineup && typeof player.recommendedStarter === "boolean") {
-    lineup = (
-      <Text testID={player.recommendedStarter ? "lineup-start" : "lineup-sit"} style={styles.cellLineup}>
-        {player.recommendedStarter ? "Start" : "Sit"}
-      </Text>
-    );
+function lineupLabel(player, showLineup) {
+  if (!showLineup || typeof player.recommendedStarter !== "boolean") {
+    return "";
   }
+  return player.recommendedStarter ? "Start" : "Sit";
+}
+
+function playerTestID(player, injuredStarter) {
+  return injuredStarter
+    ? `injury-starter-${player.id}`
+    : `player-${player.id}`;
+}
+
+function PlayerRow({ player, onPress, selected, showLineup }) {
   const injuredStarter = isInjuredStarter(player);
+  const lineup = lineupLabel(player, showLineup);
+
   return (
     <Pressable
-      testID={injuredStarter ? `injury-starter-${player.id}` : undefined}
+      testID={playerTestID(player, injuredStarter)}
+      accessibilityRole="button"
+      accessibilityLabel={`${player.name}, ${player.position}, ${player.slot}`}
+      accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.playerRow, injuredStarter && styles.injuredStarter]}
+      style={({ pressed }) => [
+        styles.playerRow,
+        injuredStarter && styles.injuredStarter,
+        selected && styles.playerSelected,
+        pressed && styles.rowPressed,
+      ]}
     >
-      <Text style={styles.cellSlot}>{player.slot}</Text>
-      <Text style={styles.cellPos}>{player.position}</Text>
-      <Text style={styles.cellName}>{player.name}</Text>
-      {lineup}
-      <Text style={styles.cellNum}>{player.projectedPts}</Text>
-      <Text style={styles.cellNum}>{player.actualPts}</Text>
-      <Text style={styles.cellNum}>{player.positionRank}</Text>
-      <Text style={styles.cellInjury}>{player.injury}</Text>
+      <Text style={[styles.cellSlot, styles.playerCell]}>{player.slot}</Text>
+      <Text style={[styles.cellPos, styles.playerCell]}>{player.position}</Text>
+      <View style={styles.cellName}>
+        <Text numberOfLines={1} style={styles.playerName}>
+          {player.name}
+        </Text>
+        {lineup ? (
+          <Text
+            testID={player.recommendedStarter ? "lineup-start" : "lineup-sit"}
+            style={[
+              styles.lineupBadge,
+              player.recommendedStarter ? styles.lineupStart : styles.lineupSit,
+            ]}
+          >
+            {lineup}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={[styles.cellNum, styles.playerStat]}>
+        {player.projectedPts}
+      </Text>
+      <Text style={[styles.cellNum, styles.playerStat]}>{player.actualPts}</Text>
+      <Text style={[styles.cellNum, styles.playerStat]}>
+        {player.positionRank}
+      </Text>
+      <Text
+        style={[
+          styles.cellInjury,
+          styles.playerCell,
+          player.injury ? styles.injuryText : null,
+        ]}
+      >
+        {player.injury}
+      </Text>
+    </Pressable>
+  );
+}
+
+function PlayerCard({ player, onPress, selected, showLineup }) {
+  const injuredStarter = isInjuredStarter(player);
+  const lineup = lineupLabel(player, showLineup);
+
+  return (
+    <Pressable
+      testID={playerTestID(player, injuredStarter)}
+      accessibilityRole="button"
+      accessibilityLabel={`${player.name}, ${player.position}, ${player.slot}`}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.playerCard,
+        injuredStarter && styles.injuredStarter,
+        selected && styles.playerSelected,
+        pressed && styles.rowPressed,
+      ]}
+    >
+      <View style={styles.playerCardTop}>
+        <View style={styles.positionMark}>
+          <Text style={styles.positionText}>{player.position}</Text>
+        </View>
+        <View style={styles.playerIdentity}>
+          <Text numberOfLines={1} style={styles.playerName}>
+            {player.name}
+          </Text>
+          <Text style={styles.playerSlot}>{player.slot}</Text>
+        </View>
+        <View style={styles.playerBadges}>
+          {lineup ? (
+            <Text
+              testID={player.recommendedStarter ? "lineup-start" : "lineup-sit"}
+              style={[
+                styles.lineupBadge,
+                player.recommendedStarter ? styles.lineupStart : styles.lineupSit,
+              ]}
+            >
+              {lineup}
+            </Text>
+          ) : null}
+          {player.injury ? (
+            <Text style={styles.injuryBadge}>{player.injury}</Text>
+          ) : null}
+        </View>
+      </View>
+      <View style={styles.mobileStats}>
+        <View style={styles.mobileStat}>
+          <Text style={styles.mobileStatLabel}>Projected</Text>
+          <Text style={styles.mobileStatValue}>{player.projectedPts}</Text>
+        </View>
+        <View style={styles.mobileStat}>
+          <Text style={styles.mobileStatLabel}>Actual</Text>
+          <Text style={styles.mobileStatValue}>{player.actualPts}</Text>
+        </View>
+        <View style={styles.mobileStat}>
+          <Text style={styles.mobileStatLabel}>Pos rank</Text>
+          <Text style={styles.mobileStatValue}>{player.positionRank}</Text>
+        </View>
+      </View>
     </Pressable>
   );
 }
@@ -98,46 +221,125 @@ function togglePick(list, player, max) {
   return [...list, player].slice(-max);
 }
 
-function TeamCard({ team, onPlayerPress, forceExpanded }) {
+function tagTone(tag) {
+  if (tag.endsWith("+")) {
+    return "positive";
+  }
+  if (tag.endsWith("-")) {
+    return "warning";
+  }
+  return "default";
+}
+
+function TeamCard({
+  desktop,
+  forceExpanded,
+  onPlayerPress,
+  selectedPlayerIds,
+  team,
+}) {
   const [expanded, setExpanded] = useState(Boolean(team.isYou));
   const showRoster = forceExpanded || expanded;
 
   return (
-    <View testID={`team-${team.id}`} style={[styles.card, team.isYou && styles.cardYou]}>
-      <Pressable onPress={() => setExpanded((current) => !current)} style={styles.teamHead}>
-        <Text style={styles.teamName}>{team.name}</Text>
-        {team.isYou ? <Text style={styles.youBadge}>You</Text> : null}
+    <Card
+      testID={`team-${team.id}`}
+      style={[styles.teamCard, team.isYou && styles.cardYou]}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${team.name} roster`}
+        accessibilityHint="Expands or collapses the team roster"
+        accessibilityState={{ expanded: showRoster }}
+        onPress={() => setExpanded((current) => !current)}
+        style={({ pressed }) => [styles.teamHead, pressed && styles.rowPressed]}
+      >
+        <View style={styles.teamTitleRow}>
+          <View
+            style={[
+              styles.teamAvatar,
+              team.isYou && styles.teamAvatarYou,
+            ]}
+          >
+            <Text
+              style={[
+                styles.teamAvatarText,
+                team.isYou && styles.teamAvatarTextYou,
+              ]}
+            >
+              {(team.name || "?").slice(0, 2).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.teamTitleCopy}>
+            <View style={styles.teamNameRow}>
+              <Text style={styles.teamName}>{team.name}</Text>
+              {team.isYou ? <Text style={styles.youBadge}>You</Text> : null}
+            </View>
+            <Text style={styles.teamRecord}>{recordText(team.record)}</Text>
+          </View>
+        </View>
+        <View style={[styles.expandMark, showRoster && styles.expandMarkOpen]}>
+          <Text style={styles.expandText}>⌄</Text>
+        </View>
       </Pressable>
       <View style={styles.standings}>
-        <Text style={styles.meta}>{recordText(team.record)}</Text>
-        <Text style={styles.meta}>PF {team.pointsFor}</Text>
-        <Text style={styles.meta}>PA {team.pointsAgainst}</Text>
-        {team.playoffSeed != null ? <Text style={styles.meta}>Seed {team.playoffSeed}</Text> : null}
-        {team.waiverRank != null ? <Text style={styles.meta}>Waiver rank {team.waiverRank}</Text> : null}
+        <View style={styles.teamStat}>
+          <Text style={styles.teamStatLabel}>Points for</Text>
+          <Text style={styles.teamStatValue}>PF {team.pointsFor}</Text>
+        </View>
+        <View style={styles.teamStat}>
+          <Text style={styles.teamStatLabel}>Points against</Text>
+          <Text style={styles.teamStatValue}>PA {team.pointsAgainst}</Text>
+        </View>
+        {team.playoffSeed != null ? (
+          <View style={styles.teamStat}>
+            <Text style={styles.teamStatLabel}>Playoff</Text>
+            <Text style={styles.teamStatValue}>Seed {team.playoffSeed}</Text>
+          </View>
+        ) : null}
+        {team.waiverRank != null ? (
+          <View style={styles.teamStat}>
+            <Text style={styles.teamStatLabel}>Priority</Text>
+            <Text style={styles.teamStatValue}>
+              Waiver rank {team.waiverRank}
+            </Text>
+          </View>
+        ) : null}
       </View>
-      <View style={styles.standings}>
+      <View style={styles.tagStrip}>
         {(team.surplusNeed || []).map((tag) => (
-          <Text key={tag} style={styles.meta}>
-            {tag}
-          </Text>
+          <StatPill key={tag} label={tag} tone={tagTone(tag)} />
         ))}
       </View>
       {showRoster ? (
-        <ScrollView horizontal>
-          <View>
+        desktop ? (
+          <View testID={`roster-table-${team.id}`} style={styles.rosterTable}>
             <PlayerHeader />
             {team.players.map((player) => (
               <PlayerRow
                 key={String(player.id)}
                 player={player}
+                selected={selectedPlayerIds.has(player.id)}
                 showLineup={team.isYou}
                 onPress={() => onPlayerPress(player, team.isYou)}
               />
             ))}
           </View>
-        </ScrollView>
+        ) : (
+          <View testID={`roster-cards-${team.id}`} style={styles.rosterCards}>
+            {team.players.map((player) => (
+              <PlayerCard
+                key={String(player.id)}
+                player={player}
+                selected={selectedPlayerIds.has(player.id)}
+                showLineup={team.isYou}
+                onPress={() => onPlayerPress(player, team.isYou)}
+              />
+            ))}
+          </View>
+        )
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -148,6 +350,8 @@ export default function LeagueBoard({
   workshopOwner,
   setWorkshopOwner,
 }) {
+  const width = useWindowWidth();
+  const desktop = isDataTableWidth(width);
   const [loading, setLoading] = useState(Boolean(leagueId));
   const [teams, setTeams] = useState([]);
   const [youPlayers, setYouPlayers] = useState([]);
@@ -159,6 +363,10 @@ export default function LeagueBoard({
   const [boardError, setBoardError] = useState("");
   const [waivers, setWaivers] = useState([]);
   const [suggested, setSuggested] = useState(null);
+  const [evaluating, setEvaluating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lineupBusy, setLineupBusy] = useState(false);
+  const [waiverBusy, setWaiverBusy] = useState(false);
   const seq = useRef(0);
 
   function loadBoard() {
@@ -174,6 +382,7 @@ export default function LeagueBoard({
       setBoardError("");
       setWaivers([]);
       setSuggested(null);
+      setEvaluating(false);
       return;
     }
     const token = seq.current + 1;
@@ -194,6 +403,7 @@ export default function LeagueBoard({
         setBoardError(data.error || waiverData.error || "");
         setWaivers(waiverData.waivers || []);
         setSuggested(waiverData.suggested || null);
+        setEvaluating(false);
         setLoading(false);
       })
       .catch(() => {
@@ -210,6 +420,7 @@ export default function LeagueBoard({
         setBoardError("Could not load league");
         setWaivers([]);
         setSuggested(null);
+        setEvaluating(false);
         setLoading(false);
       });
   }
@@ -227,6 +438,7 @@ export default function LeagueBoard({
     if (!nextYou.length || !nextThem.length || total > 3) {
       return;
     }
+    setEvaluating(true);
     fetchEvaluate(
       leagueId,
       nextYou.map((row) => row.id).join("+"),
@@ -236,7 +448,8 @@ export default function LeagueBoard({
         setWorkshop(trade);
         setWorkshopOwner?.("board");
       })
-      .catch(() => setBoardError("Could not evaluate"));
+      .catch(() => setBoardError("Could not evaluate"))
+      .finally(() => setEvaluating(false));
   }
 
   function clearSelection() {
@@ -244,21 +457,46 @@ export default function LeagueBoard({
     setThemPlayers([]);
     setWorkshop(null);
     setWorkshopOwner?.(null);
+    setEvaluating(false);
   }
 
   function onRefresh() {
+    setRefreshing(true);
     refreshLeague(leagueId)
       .then(() => onReload?.())
-      .catch((err) => setBoardError(err.body?.error || "Refresh failed"));
+      .catch((err) => setBoardError(err.body?.error || "Refresh failed"))
+      .finally(() => setRefreshing(false));
+  }
+
+  function onSetLineup() {
+    setLineupBusy(true);
+    setLineup(leagueId)
+      .then(() => onReload?.())
+      .catch((err) => setBoardError(err.body?.error || "Lineup failed"))
+      .finally(() => setLineupBusy(false));
+  }
+
+  function onClaimWaiver() {
+    if (!suggested) {
+      return;
+    }
+    setWaiverBusy(true);
+    claimWaiver(leagueId, suggested.add.id, suggested.drop.id)
+      .then(() => onReload?.())
+      .catch((err) => setBoardError(err.body?.error || "Claim failed"))
+      .finally(() => setWaiverBusy(false));
   }
 
   if (loading) {
-    return <ActivityIndicator testID="league-loading" />;
+    return <LoadingState testID="league-loading" label="Loading league board" />;
   }
 
   if (!leagueId) {
     return (
-      <Text style={styles.empty}>Add a league in settings, then pick it here.</Text>
+      <EmptyState
+        title="Add a league in settings, then pick it here."
+        description="Connect ESPN above to unlock roster, lineup, and waiver intelligence."
+      />
     );
   }
 
@@ -280,40 +518,136 @@ export default function LeagueBoard({
   const sortLabel = sort === "slot" ? "Sort: Slot" : sort === "proj" ? "Sort: Proj" : "Sort: Rank";
 
   const showWorkshop = workshop && workshopOwner !== "trades";
+  const hasSelection = youPlayers.length > 0 || themPlayers.length > 0;
+  const selectedPlayerIds = new Set(
+    [...youPlayers, ...themPlayers].map((player) => player.id)
+  );
 
   return (
     <View style={styles.board}>
-      <TextInput
-        placeholder="Search players"
-        value={query}
-        onChangeText={setQuery}
-        autoCapitalize="none"
-        style={styles.search}
+      <SectionHeader
+        eyebrow="Roster intelligence"
+        title="League board"
+        subtitle="Search every roster, spot lineup leaks, and build a deal."
       />
-      <Pressable onPress={() => setSort((current) => (current === "slot" ? "proj" : current === "proj" ? "rank" : "slot"))}>
-        <Text>{sortLabel}</Text>
-      </Pressable>
-      <Pressable onPress={onRefresh}>
-        <Text>Refresh</Text>
-      </Pressable>
-      <Pressable
-        onPress={() =>
-          setLineup(leagueId)
-            .then(() => onReload?.())
-            .catch((err) => setBoardError(err.body?.error || "Lineup failed"))
-        }
-      >
-        <Text>Set lineup on ESPN</Text>
-      </Pressable>
-      {boardError ? (
-        <View>
-          <Text>{boardError}</Text>
-          <Pressable onPress={loadBoard}>
-            <Text>Retry</Text>
-          </Pressable>
+      <Card style={styles.controlPanel}>
+        <View style={styles.searchWrap}>
+          <View style={styles.searchMark}>
+            <Text style={styles.searchMarkText}>⌕</Text>
+          </View>
+          <TextInput
+            accessibilityLabel="Search players"
+            placeholder="Search players"
+            placeholderTextColor={colors.textMuted}
+            selectionColor={colors.accent}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            style={styles.search}
+          />
         </View>
+        <View style={styles.toolbar}>
+          <Chip
+            label={sortLabel}
+            onPress={() =>
+              setSort((current) =>
+                current === "slot"
+                  ? "proj"
+                  : current === "proj"
+                    ? "rank"
+                    : "slot"
+              )
+            }
+          />
+          <ActionButton
+            testID="board-refresh"
+            label="Refresh"
+            busyLabel="Refreshing"
+            busy={refreshing}
+            onPress={onRefresh}
+            variant="secondary"
+            style={styles.toolbarAction}
+          />
+          <ActionButton
+            label="Set lineup on ESPN"
+            busyLabel="Setting lineup"
+            busy={lineupBusy}
+            onPress={onSetLineup}
+            style={styles.toolbarAction}
+          />
+        </View>
+        {fetchedAt ? (
+          <View style={styles.syncRow}>
+            <View style={styles.syncDot} />
+            <Text style={styles.syncLabel}>Last sync</Text>
+            <Text style={styles.syncValue}>{fetchedAt}</Text>
+          </View>
+        ) : null}
+      </Card>
+      {boardError ? (
+        <InlineBanner
+          tone="danger"
+          title="League data needs attention"
+          message={boardError}
+          actionLabel="Retry"
+          onAction={loadBoard}
+        />
       ) : null}
-      {fetchedAt ? <Text>{fetchedAt}</Text> : null}
+      {hasSelection && !showWorkshop ? (
+        <Card testID="trade-selection" style={styles.selectionCard}>
+          <View style={styles.selectionHeader}>
+            <View>
+              <Text style={styles.selectionEyebrow}>Quick evaluation</Text>
+              <Text style={styles.selectionTitle}>Trade builder</Text>
+            </View>
+            <ActionButton
+              label="Clear selection"
+              variant="ghost"
+              onPress={clearSelection}
+            />
+          </View>
+          <View style={styles.selectionSides}>
+            <View style={styles.selectionSide}>
+              <Text style={styles.selectionLabel}>Your side</Text>
+              {youPlayers.length ? (
+                youPlayers.map((player) => (
+                  <View
+                    key={player.id}
+                    testID={`selected-your-${player.id}`}
+                    style={styles.selectionPlayer}
+                  >
+                    <Text style={styles.selectionPlayerText}>{player.name}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.selectionEmpty}>Pick your player</Text>
+              )}
+            </View>
+            <Text style={styles.selectionSwap}>⇄</Text>
+            <View style={styles.selectionSide}>
+              <Text style={styles.selectionLabel}>Their side</Text>
+              {themPlayers.length ? (
+                themPlayers.map((player) => (
+                  <View
+                    key={player.id}
+                    testID={`selected-their-${player.id}`}
+                    style={styles.selectionPlayer}
+                  >
+                    <Text style={styles.selectionPlayerText}>{player.name}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.selectionEmpty}>Pick their player</Text>
+              )}
+            </View>
+          </View>
+          <Text style={styles.selectionHint}>
+            {evaluating
+              ? "Evaluating matchup…"
+              : "Select players from both sides to evaluate the deal."}
+          </Text>
+        </Card>
+      ) : null}
       {showWorkshop ? (
         <Workshop
           trade={workshop}
@@ -326,42 +660,75 @@ export default function LeagueBoard({
       {visibleTeams.map((team) => (
         <TeamCard
           key={team.id}
+          desktop={desktop}
           team={team}
           onPlayerPress={onPlayerPress}
           forceExpanded={Boolean(needle)}
+          selectedPlayerIds={selectedPlayerIds}
         />
       ))}
-      <View>
-        <Text>Waivers</Text>
+      <View style={styles.waiverSection}>
+        <SectionHeader
+          eyebrow="Free agent edge"
+          title="Waivers"
+          subtitle="Prioritize moves that improve your weekly starter floor."
+        />
         {suggested ? (
-          <View>
-            <Text>
-              Add {suggested.add.name}, drop {suggested.drop.name}
-            </Text>
-            <Pressable
-              onPress={() =>
-                claimWaiver(leagueId, suggested.add.id, suggested.drop.id)
-                  .then(() => onReload?.())
-                  .catch((err) => setBoardError(err.body?.error || "Claim failed"))
-              }
-            >
-              <Text>File waiver on ESPN</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        {waivers.length ? (
-          waivers.map((player) => (
-            <View key={String(player.id)}>
-              <Text>{player.name}</Text>
-              <Text>
-                {player.position} {player.projectedPts} {player.deltaVsWorstStarter}
-                {player.beatsStarter ? " beats starter" : ""}
-                {player.streamer ? " streamer" : ""}
+          <Card testID="waiver-suggestion" style={styles.waiverHero} elevated>
+            <View style={styles.waiverHeroCopy}>
+              <Text style={styles.waiverEyebrow}>Recommended move</Text>
+              <Text style={styles.waiverMove}>
+                {`Add ${suggested.add.name}, drop ${suggested.drop.name}`}
+              </Text>
+              <Text style={styles.waiverHelper}>
+                The strongest available upgrade based on projected starter value.
               </Text>
             </View>
-          ))
+            <ActionButton
+              testID="waiver-claim"
+              label="File waiver on ESPN"
+              busyLabel="Filing waiver"
+              busy={waiverBusy}
+              onPress={onClaimWaiver}
+              style={styles.waiverAction}
+            />
+          </Card>
+        ) : null}
+        {waivers.length ? (
+          <View style={styles.waiverList}>
+            {waivers.map((player) => (
+              <Card key={String(player.id)} style={styles.waiverPlayer}>
+                <View style={styles.waiverIdentity}>
+                  <View style={styles.positionMark}>
+                    <Text style={styles.positionText}>{player.position}</Text>
+                  </View>
+                  <View style={styles.waiverNameWrap}>
+                    <Text style={styles.waiverName}>{player.name}</Text>
+                    <Text style={styles.waiverProjection}>
+                      {player.position} · {displayNumber(player.projectedPts)} projected
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.waiverTags}>
+                  <StatPill
+                    label={`${player.deltaVsWorstStarter > 0 ? "+" : ""}${displayNumber(player.deltaVsWorstStarter)}`}
+                    tone={player.deltaVsWorstStarter > 0 ? "positive" : "default"}
+                  />
+                  {player.beatsStarter ? (
+                    <StatPill label="beats starter" tone="positive" />
+                  ) : null}
+                  {player.streamer ? (
+                    <StatPill label="streamer" tone="warning" />
+                  ) : null}
+                </View>
+              </Card>
+            ))}
+          </View>
         ) : (
-          <Text>No free agents.</Text>
+          <EmptyState
+            title="No free agents."
+            description="The wire is quiet right now. Refresh after ESPN updates."
+          />
         )}
       </View>
     </View>
@@ -370,96 +737,509 @@ export default function LeagueBoard({
 
 const styles = StyleSheet.create({
   board: {
-    gap: 12,
-    marginBottom: 16,
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  controlPanel: {
+    gap: spacing.md,
+    backgroundColor: colors.surfaceRaised,
+  },
+  searchWrap: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    backgroundColor: colors.canvasMuted,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchMark: {
+    width: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchMarkText: {
+    color: colors.textMuted,
+    fontSize: 22,
   },
   search: {
-    borderWidth: 1,
-    borderColor: "#d4d4d8",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
+    flex: 1,
+    minWidth: 0,
+    paddingRight: spacing.md,
+    paddingVertical: 12,
+    color: colors.text,
+    ...typography.body,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
+  toolbar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  toolbarAction: {
+    flexGrow: 1,
+  },
+  syncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  syncDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  syncLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  syncValue: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  selectionCard: {
+    gap: spacing.md,
+    borderColor: colors.info,
+    backgroundColor: colors.infoSoft,
+  },
+  selectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  selectionEyebrow: {
+    ...typography.sectionLabel,
+    color: colors.info,
+    marginBottom: 2,
+  },
+  selectionTitle: {
+    ...typography.title,
+    color: colors.text,
+  },
+  selectionSides: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  selectionSide: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xs,
+  },
+  selectionLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  selectionPlayer: {
+    minHeight: 38,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e4e4e7",
+    borderColor: colors.borderStrong,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  selectionPlayerText: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  selectionEmpty: {
+    ...typography.caption,
+    color: colors.textMuted,
+    paddingVertical: 10,
+  },
+  selectionSwap: {
+    color: colors.info,
+    fontSize: 20,
+  },
+  selectionHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  teamCard: {
+    padding: 0,
+    overflow: "hidden",
   },
   cardYou: {
-    borderColor: "#18181b",
+    borderColor: colors.accent,
     borderWidth: 2,
   },
   teamHead: {
+    minHeight: 76,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  teamTitleRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  teamAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  teamAvatarYou: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
+  teamAvatarText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: "900",
+  },
+  teamAvatarTextYou: {
+    color: colors.accent,
+  },
+  teamTitleCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  teamNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
   teamName: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...typography.bodyStrong,
+    color: colors.text,
+    flexShrink: 1,
   },
   youBadge: {
-    backgroundColor: "#18181b",
-    color: "#fafafa",
-    fontSize: 12,
-    fontWeight: "700",
-    paddingHorizontal: 8,
+    ...typography.caption,
+    backgroundColor: colors.accent,
+    color: colors.accentInk,
+    fontWeight: "900",
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     overflow: "hidden",
-    borderRadius: 4,
+    borderRadius: radii.pill,
+  },
+  teamRecord: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  expandMark: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "0deg" }],
+  },
+  expandMarkOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  expandText: {
+    color: colors.textMuted,
+    fontSize: 20,
+    lineHeight: 23,
+    marginTop: -5,
   },
   standings: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 8,
+    gap: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.canvasMuted,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  meta: {
-    color: "#3f3f46",
-    fontWeight: "600",
+  teamStat: {
+    minWidth: 92,
+    flexGrow: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+  },
+  teamStatLabel: {
+    ...typography.sectionLabel,
+    color: colors.textMuted,
+  },
+  teamStatValue: {
+    ...typography.stat,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  tagStrip: {
+    minHeight: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  rosterCards: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  rosterTable: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    overflow: "hidden",
   },
   playerRow: {
     flexDirection: "row",
-    paddingVertical: 6,
+    alignItems: "center",
+    minHeight: 48,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "#e4e4e7",
-    minWidth: 640,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: spacing.xs,
+  },
+  playerCard: {
+    minHeight: 92,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceRaised,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  playerCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  positionMark: {
+    minWidth: 38,
+    height: 34,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.sm,
+    backgroundColor: colors.infoSoft,
+    borderWidth: 1,
+    borderColor: colors.info,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  positionText: {
+    ...typography.caption,
+    color: colors.info,
+    fontWeight: "900",
+  },
+  playerIdentity: {
+    flex: 1,
+    minWidth: 0,
+  },
+  playerName: {
+    ...typography.bodyStrong,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  playerSlot: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  playerBadges: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
+  lineupBadge: {
+    ...typography.caption,
+    fontWeight: "900",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    overflow: "hidden",
+  },
+  lineupStart: {
+    color: colors.success,
+    backgroundColor: colors.successSoft,
+  },
+  lineupSit: {
+    color: colors.textMuted,
+    backgroundColor: colors.surfaceMuted,
+  },
+  injuryBadge: {
+    ...typography.caption,
+    color: colors.danger,
+    backgroundColor: colors.dangerSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    overflow: "hidden",
+    fontWeight: "900",
+  },
+  mobileStats: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  mobileStat: {
+    flex: 1,
+  },
+  mobileStatLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  mobileStatValue: {
+    ...typography.stat,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
   injuredStarter: {
-    backgroundColor: "#fecaca",
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
+  },
+  playerSelected: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+    borderWidth: 2,
+  },
+  rowPressed: {
+    opacity: 0.72,
   },
   playerHeader: {
-    backgroundColor: "#f4f4f5",
+    minHeight: 42,
+    backgroundColor: colors.surfaceMuted,
   },
   headerText: {
-    fontWeight: "700",
-    color: "#18181b",
+    ...typography.sectionLabel,
+    color: colors.textMuted,
+  },
+  playerCell: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  playerStat: {
+    ...typography.stat,
+    color: colors.textSecondary,
   },
   cellSlot: {
-    width: 56,
+    flexBasis: 48,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   cellPos: {
-    width: 48,
+    flexBasis: 42,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   cellName: {
-    width: 160,
-  },
-  cellLineup: {
-    width: 48,
-    fontWeight: "700",
+    flex: 2,
+    minWidth: 100,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   cellNum: {
-    width: 72,
+    flex: 0.75,
+    minWidth: 46,
+    textAlign: "right",
   },
   cellInjury: {
-    width: 88,
+    flexBasis: 70,
+    flexGrow: 0,
+    flexShrink: 0,
+    textAlign: "right",
   },
-  empty: {
-    padding: 16,
-    color: "#52525b",
+  injuryText: {
+    color: colors.danger,
+    fontWeight: "800",
+  },
+  waiverSection: {
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  waiverHero: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.lg,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+  },
+  waiverHeroCopy: {
+    flex: 2,
+    minWidth: 220,
+  },
+  waiverEyebrow: {
+    ...typography.sectionLabel,
+    color: colors.accent,
+    marginBottom: spacing.xs,
+  },
+  waiverMove: {
+    ...typography.title,
+    color: colors.text,
+  },
+  waiverHelper: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  waiverAction: {
+    flexGrow: 1,
+  },
+  waiverList: {
+    gap: spacing.sm,
+  },
+  waiverPlayer: {
+    minHeight: 72,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  waiverIdentity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flex: 1,
+    minWidth: 180,
+  },
+  waiverNameWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  waiverName: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  waiverProjection: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  waiverTags: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
 });

@@ -1,60 +1,74 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+
+import { Card, Chip } from "../ui/primitives";
+import { colors, spacing, typography } from "../ui/theme";
 
 export default function LeagueSwitcher({ leagues, onSelect, selectedId }) {
   if (!leagues.length) {
     return (
-      <Text testID="league-switcher" style={styles.empty}>
-        Add a league in settings, then pick it here.
-      </Text>
+      <Card>
+        <Text style={styles.eyebrow}>Active league</Text>
+        <Text testID="league-switcher" style={styles.empty}>
+          Add a league in settings, then pick it here.
+        </Text>
+      </Card>
     );
   }
   return (
-    <View testID="league-switcher" style={styles.row}>
-      {leagues.map((league) => {
-        const selected = league.id === selectedId;
-        return (
-          <Pressable
-            key={league.id}
-            testID={`league-tab-${league.id}`}
-            accessibilityState={{ selected }}
-            onPress={() => onSelect(league.id)}
-            style={[styles.tab, selected && styles.tabSelected]}
-          >
-            <Text style={[styles.tabText, selected && styles.tabTextSelected]}>
-              {league.name}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Card style={styles.shell}>
+      <View style={styles.copy}>
+        <Text style={styles.eyebrow}>Active league</Text>
+        <Text style={styles.helper}>Switch the dashboard context</Text>
+      </View>
+      <ScrollView
+        testID="league-switcher"
+        accessibilityRole="tablist"
+        accessibilityLabel="Leagues"
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
+        {leagues.map((league) => {
+          const selected = league.id === selectedId;
+          return (
+            <Chip
+              key={league.id}
+              testID={`league-tab-${league.id}`}
+              accessibilityRole="tab"
+              accessibilityLabel={league.name}
+              label={league.name}
+              selected={selected}
+              onPress={() => onSelect(league.id)}
+            />
+          );
+        })}
+      </ScrollView>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    gap: spacing.md,
+  },
+  copy: {
+    gap: 1,
+  },
+  eyebrow: {
+    ...typography.sectionLabel,
+    color: colors.accent,
+  },
+  helper: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
   empty: {
-    paddingBottom: 12,
-    color: "#52525b",
+    ...typography.body,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingBottom: 12,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: "#e4e4e7",
-  },
-  tabSelected: {
-    backgroundColor: "#18181b",
-  },
-  tabText: {
-    color: "#18181b",
-    fontWeight: "600",
-  },
-  tabTextSelected: {
-    color: "#fafafa",
+    gap: spacing.sm,
+    paddingRight: spacing.xs,
   },
 });

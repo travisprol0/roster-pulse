@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { saveEspnCredentials } from "../api/espnCredentials";
 import { deleteLeague } from "../api/leagues";
+import { ActionButton, Card, InlineBanner } from "../ui/primitives";
+import { colors, radii, spacing, typography } from "../ui/theme";
 
 function emptyLeague() {
-  return { leagueId: "", espn_s2: "", swid: "" };
+  return { leagueId: "" };
 }
 
 function fromSaved(savedLeagues) {
@@ -14,8 +16,6 @@ function fromSaved(savedLeagues) {
   }
   return savedLeagues.map((league) => ({
     leagueId: String(league.id),
-    espn_s2: "",
-    swid: "",
   }));
 }
 
@@ -63,12 +63,9 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
       setSyncOk("");
       return;
     }
-    const incomplete = leagues.some(
-      (row) =>
-        !(row.leagueId || "").trim() || !(row.espn_s2 || "").trim() || !(row.swid || "").trim()
-    );
+    const incomplete = leagues.some((row) => !(row.leagueId || "").trim());
     if (incomplete) {
-      setSyncError("Each league needs ID, espn_s2, and SWID");
+      setSyncError("Each league needs an ID");
       setSyncOk("");
       return;
     }
@@ -101,107 +98,247 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
   }
 
   return (
-    <View style={styles.content}>
-      <Pressable onPress={toggleExpanded}>
-        <Text style={styles.header}>Leagues / cookies</Text>
-      </Pressable>
-      {syncError ? <Text>{syncError}</Text> : null}
-      {syncOk ? <Text>{syncOk}</Text> : null}
-      {expanded ? (
-        <>
-          <Text style={styles.label}>Season</Text>
-          <TextInput
-            placeholder="2026"
-            value={season}
-            onChangeText={setSeason}
-            keyboardType="number-pad"
-            style={styles.input}
-          />
-          <Text style={styles.hint}>
-            Stored cookies are reused until you paste new espn_s2 and SWID.
+    <Card style={styles.content} elevated>
+      <Pressable
+        testID="settings-toggle"
+        accessibilityRole="button"
+        accessibilityLabel="Leagues"
+        accessibilityState={{ expanded }}
+        onPress={toggleExpanded}
+        style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}
+      >
+        <View style={styles.toggleCopy}>
+          <Text style={styles.eyebrow}>ESPN account</Text>
+          <Text style={styles.header}>Leagues</Text>
+          <Text style={styles.summary}>
+            {savedLeagues.length
+              ? `${savedLeagues.length} league${savedLeagues.length === 1 ? "" : "s"} connected`
+              : "Connect a league to unlock your dashboard"}
           </Text>
+        </View>
+        <View style={[styles.chevron, expanded && styles.chevronExpanded]}>
+          <Text style={styles.chevronText}>⌄</Text>
+        </View>
+      </Pressable>
+      {syncError ? (
+        <InlineBanner
+          tone="danger"
+          title="ESPN sync needs attention"
+          message={syncError}
+        />
+      ) : null}
+      {syncOk ? (
+        <InlineBanner tone="success" title="League data updated" message={syncOk} />
+      ) : null}
+      {expanded ? (
+        <View style={styles.form}>
+          <View>
+            <Text style={styles.label}>Season</Text>
+            <TextInput
+              accessibilityLabel="Season"
+              placeholder="2026"
+              placeholderTextColor={colors.textMuted}
+              selectionColor={colors.accent}
+              value={season}
+              onChangeText={setSeason}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+          </View>
+          <View style={styles.privacyNote}>
+            <View style={styles.lockMark}>
+              <Text style={styles.lockText}>••</Text>
+            </View>
+            <Text style={styles.hint}>
+              ESPN cookies stay on the server. This form only needs league IDs.
+            </Text>
+          </View>
           {leagues.map((league, index) => (
             <View key={index} style={styles.block}>
-              <Text style={styles.heading}>League {index + 1}</Text>
+              <View style={styles.blockHeader}>
+                <View style={styles.leagueNumber}>
+                  <Text style={styles.leagueNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.heading}>League {index + 1}</Text>
+              </View>
               <Text style={styles.label}>League ID</Text>
               <TextInput
+                accessibilityLabel={`League ${index + 1} ID`}
                 placeholder={`League ID ${index + 1}`}
+                placeholderTextColor={colors.textMuted}
+                selectionColor={colors.accent}
                 value={league.leagueId}
                 onChangeText={(value) => updateLeague(index, "leagueId", value)}
                 autoCapitalize="none"
                 style={styles.input}
               />
-              <Text style={styles.label}>espn_s2</Text>
-              <TextInput
-                placeholder="espn_s2"
-                value={league.espn_s2}
-                onChangeText={(value) => updateLeague(index, "espn_s2", value)}
-                autoCapitalize="none"
-                secureTextEntry
-                style={styles.input}
+              <ActionButton
+                label="Remove league"
+                variant="danger"
+                onPress={() => onRemove(index)}
               />
-              <Text style={styles.label}>SWID</Text>
-              <TextInput
-                placeholder="swid"
-                value={league.swid}
-                onChangeText={(value) => updateLeague(index, "swid", value)}
-                autoCapitalize="none"
-                secureTextEntry
-                style={styles.input}
-              />
-              <Button title="Remove league" onPress={() => onRemove(index)} />
             </View>
           ))}
           <View style={styles.actions}>
-            <Button
-              title="Add league"
+            <ActionButton
+              label="Add league"
+              variant="secondary"
               onPress={() => setLeagues((current) => [...current, emptyLeague()])}
+              style={styles.action}
             />
-            <Button title="Submit" onPress={onSubmit} disabled={busy} />
+            <ActionButton
+              testID="settings-submit"
+              label="Submit"
+              busyLabel="Syncing"
+              busy={busy}
+              onPress={onSubmit}
+              style={styles.action}
+            />
           </View>
-        </>
+        </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    gap: spacing.md,
+  },
+  toggle: {
+    minHeight: 64,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  pressed: {
+    opacity: 0.72,
+  },
+  toggleCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  eyebrow: {
+    ...typography.sectionLabel,
+    color: colors.info,
+    marginBottom: spacing.xs,
   },
   header: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
+    ...typography.title,
+    color: colors.text,
+  },
+  summary: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  chevron: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "0deg" }],
+  },
+  chevronExpanded: {
+    transform: [{ rotate: "180deg" }],
+  },
+  chevronText: {
+    color: colors.textSecondary,
+    fontSize: 22,
+    lineHeight: 24,
+    marginTop: -5,
+  },
+  form: {
+    gap: spacing.md,
+    paddingTop: spacing.xs,
   },
   hint: {
-    color: "#52525b",
-    marginBottom: 12,
+    ...typography.caption,
+    color: colors.textMuted,
+    flex: 1,
+  },
+  privacyNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.infoSoft,
+    borderWidth: 1,
+    borderColor: colors.info,
+  },
+  lockMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockText: {
+    color: colors.info,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   block: {
-    marginBottom: 16,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.canvasMuted,
+  },
+  blockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  leagueNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  leagueNumberText: {
+    ...typography.caption,
+    color: colors.accent,
+    fontWeight: "900",
   },
   heading: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
+    ...typography.bodyStrong,
+    color: colors.text,
   },
   label: {
-    marginBottom: 4,
-    color: "#3f3f46",
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d4d4d8",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    backgroundColor: "#fff",
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    ...typography.body,
   },
   actions: {
-    gap: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  action: {
+    flexGrow: 1,
   },
 });

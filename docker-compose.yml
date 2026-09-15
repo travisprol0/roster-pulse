@@ -1,29 +1,35 @@
 services:
   db:
     image: postgres:16
+    network_mode: host
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-roster_pulse}
       POSTGRES_USER: ${POSTGRES_USER:-roster}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roster}
-    ports:
-      - "5434:5432"
+    command: ["postgres", "-p", "5434", "-c", "listen_addresses=*"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-roster} -d ${POSTGRES_DB:-roster_pulse}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -p 5434 -U ${POSTGRES_USER:-roster} -d ${POSTGRES_DB:-roster_pulse}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   web:
     build: .
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: "5434"
     depends_on:
       db:
         condition: service_healthy

@@ -2,9 +2,10 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague, refreshLeague } from "../api/league";
-import { fetchWaivers } from "../api/waivers";
+import { claimWaiver, fetchWaivers } from "../api/waivers";
 import { copyText } from "../clipboard";
 import LeagueBoard from "../screens/LeagueBoard";
+import { useWindowWidth } from "../useWindowWidth";
 
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(() => Promise.resolve({ youTeamId: null, teams: [] })),
@@ -22,6 +23,10 @@ jest.mock("../api/waivers", () => ({
   claimWaiver: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
+jest.mock("../useWindowWidth", () => ({
+  useWindowWidth: jest.fn(() => 400),
+}));
+
 jest.mock(
   "../clipboard",
   () => ({
@@ -29,6 +34,10 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+beforeEach(() => {
+  useWindowWidth.mockReturnValue(400);
+});
 
 const board = {
   youTeamId: 1,
@@ -117,6 +126,7 @@ test("renders standings and roster rows for every team", async () => {
   await waitFor(() => getByText("User Team"));
 
   expect(fetchLeague).toHaveBeenCalledWith("12345");
+  expect(getByText("League board")).toBeTruthy();
   expect(getByText("You")).toBeTruthy();
   expect(getByText("3-1-0")).toBeTruthy();
   expect(getByText("PF 412.2")).toBeTruthy();
@@ -160,6 +170,24 @@ const evaluateResponse = {
   afterB: 483.1,
   mutual: true,
 };
+
+test("shows selected players before a trade can be evaluated", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+
+  const { findByText, getByTestId, getByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  fireEvent.press(getByText("Bench RB"));
+
+  expect(getByTestId("trade-selection")).toBeTruthy();
+  expect(getByText("Trade builder")).toBeTruthy();
+  expect(getByTestId("selected-your-a-rb3")).toBeTruthy();
+  expect(getByTestId("player-a-rb3").props.accessibilityState.selected).toBe(
+    true
+  );
+});
 
 test("pressing your player then an opponent player opens the Workshop", async () => {
   fetchLeague.mockResolvedValueOnce(board);
@@ -352,12 +380,19 @@ test("Refresh press calls the refresh API helper", async () => {
   });
   refreshLeague.mockResolvedValueOnce({ fetchedAt: "2026-09-15T13:00:00Z" });
 
-  const { getByText, findByText } = render(<LeagueBoard leagueId="12345" />);
+  const { getByTestId, getByText, findByText } = render(
+    <LeagueBoard leagueId="12345" />
+  );
   expect(await findByText("User Team")).toBeTruthy();
 
   fireEvent.press(getByText("Refresh"));
 
   expect(refreshLeague).toHaveBeenCalledWith("12345");
+  await waitFor(() =>
+    expect(getByTestId("board-refresh").props.accessibilityState.busy).toBe(
+      false
+    )
+  );
 });
 
 test("shows last synced time from fetchedAt", async () => {
@@ -415,10 +450,51 @@ test("wire list shows a free agent name", async () => {
   expect(await findByText("FA TE")).toBeTruthy();
 });
 
+test("presents and files the suggested waiver as a primary action", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchWaivers.mockResolvedValueOnce({
+    suggested: {
+      add: { id: "fa-te", name: "FA TE" },
+      drop: { id: "a-te", name: "Weak TE" },
+    },
+    waivers: [],
+  });
+
+  const { findByText, getByTestId } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Add FA TE, drop Weak TE")).toBeTruthy();
+  expect(getByTestId("waiver-suggestion")).toBeTruthy();
+  expect(getByTestId("waiver-claim").props.accessibilityRole).toBe("button");
+
+  fireEvent.press(getByTestId("waiver-claim"));
+  expect(claimWaiver).toHaveBeenCalledWith("12345", "fa-te", "a-te");
+  await waitFor(() =>
+    expect(getByTestId("waiver-claim").props.accessibilityState.busy).toBe(false)
+  );
+});
+
 test("wire list shows empty copy when there are no free agents", async () => {
   fetchLeague.mockResolvedValueOnce(board);
   fetchWaivers.mockResolvedValueOnce({ waivers: [] });
 
   const { findByText } = render(<LeagueBoard leagueId="12345" />);
   expect(await findByText("No free agents.")).toBeTruthy();
+});
+
+test("uses compact roster cards on phones and a table at desktop width", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  const { findByText, getByTestId, queryByTestId, rerender } = render(
+    <LeagueBoard leagueId="12345" />
+  );
+  expect(await findByText("Bench RB")).toBeTruthy();
+
+  expect(getByTestId("roster-cards-1")).toBeTruthy();
+  expect(queryByTestId("roster-table-1")).toBeNull();
+
+  useWindowWidth.mockReturnValue(1200);
+  rerender(<LeagueBoard leagueId="12345" />);
+
+  expect(getByTestId("roster-table-1")).toBeTruthy();
+  expect(queryByTestId("roster-cards-1")).toBeNull();
 });

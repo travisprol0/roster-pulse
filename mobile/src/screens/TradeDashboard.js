@@ -1,14 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fetchTrades } from "../api/trades";
+import { isDataTableWidth } from "../layout";
+import {
+  Card,
+  Chip,
+  EmptyState,
+  InlineBanner,
+  LoadingState,
+  SectionHeader,
+  StatPill,
+} from "../ui/primitives";
+import { colors, radii, spacing, typography } from "../ui/theme";
+import { useWindowWidth } from "../useWindowWidth";
 import Workshop from "./Workshop";
 
 function formatDelta(delta) {
   return delta > 0 ? `+${delta}` : `${delta}`;
 }
 
-function Filters({ trades, onOpponent, onPosition }) {
+function Filters({
+  opponentId,
+  onOpponent,
+  onPosition,
+  position,
+  trades,
+}) {
   const opponents = [];
   const seen = new Set();
   for (const trade of trades) {
@@ -19,31 +37,47 @@ function Filters({ trades, onOpponent, onPosition }) {
     opponents.push({ id: trade.teamBId, name: trade.teamBName });
   }
   return (
-    <View style={styles.filters}>
-      <Pressable testID="filter-opponent-all" onPress={() => onOpponent("all")}>
-        <Text>All opponents</Text>
-      </Pressable>
-      {opponents.map((opponent) => (
-        <Pressable
-          key={String(opponent.id)}
-          testID={`filter-opponent-${opponent.id}`}
-          onPress={() => onOpponent(opponent.id)}
-        >
-          <Text>vs {opponent.name}</Text>
-        </Pressable>
-      ))}
-      <Pressable testID="filter-position-all" onPress={() => onPosition("all")}>
-        <Text>All positions</Text>
-      </Pressable>
-      {["QB", "RB", "WR", "TE", "K", "DST"].map((pos) => (
-        <Pressable
-          key={pos}
-          testID={`filter-position-${pos}`}
-          onPress={() => onPosition(pos)}
-        >
-          <Text>{pos}</Text>
-        </Pressable>
-      ))}
+    <View style={styles.filterGroups}>
+      <View style={styles.filterGroup}>
+        <Text style={styles.filterLabel}>Opponent</Text>
+        <View style={styles.filters}>
+          <Chip
+            testID="filter-opponent-all"
+            label="All opponents"
+            selected={opponentId === "all"}
+            onPress={() => onOpponent("all")}
+          />
+          {opponents.map((opponent) => (
+            <Chip
+              key={String(opponent.id)}
+              testID={`filter-opponent-${opponent.id}`}
+              label={`vs ${opponent.name}`}
+              selected={opponentId === opponent.id}
+              onPress={() => onOpponent(opponent.id)}
+            />
+          ))}
+        </View>
+      </View>
+      <View style={styles.filterGroup}>
+        <Text style={styles.filterLabel}>Position</Text>
+        <View style={styles.filters}>
+          <Chip
+            testID="filter-position-all"
+            label="All positions"
+            selected={position === "all"}
+            onPress={() => onPosition("all")}
+          />
+          {["QB", "RB", "WR", "TE", "K", "DST"].map((pos) => (
+            <Chip
+              key={pos}
+              testID={`filter-position-${pos}`}
+              label={pos}
+              selected={position === pos}
+              onPress={() => onPosition(pos)}
+            />
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -60,6 +94,78 @@ function Header() {
   );
 }
 
+function TradeCard({ item, onPress }) {
+  return (
+    <Pressable
+      testID={`trade-card-${item.id}`}
+      accessibilityRole="button"
+      accessibilityLabel={`Trade ${item.send} for ${item.receive} with ${item.teamBName}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tradeCard,
+        pressed && styles.tradePressed,
+      ]}
+    >
+      <View style={styles.tradeCardHeader}>
+        <View>
+          <Text style={styles.tradeCardEyebrow}>Them</Text>
+          <Text style={styles.tradeOpponent}>{item.teamBName}</Text>
+        </View>
+        <View style={styles.tradeDeltaPair}>
+          <StatPill
+            label={
+              item.teamADelta >= 0 && item.teamBDelta >= 0
+                ? "Mutual upside"
+                : "Review impact"
+            }
+            tone={
+              item.teamADelta >= 0 && item.teamBDelta >= 0
+                ? "positive"
+                : "warning"
+            }
+          />
+        </View>
+      </View>
+      <View style={styles.tradeFlow}>
+        <View style={styles.tradeSide}>
+          <Text style={styles.tradeSideLabel}>You send</Text>
+          <Text style={styles.tradePlayer}>{item.send}</Text>
+        </View>
+        <Text style={styles.tradeArrow}>→</Text>
+        <View style={styles.tradeSide}>
+          <Text style={styles.tradeSideLabel}>You receive</Text>
+          <Text style={styles.tradePlayer}>{item.receive}</Text>
+        </View>
+      </View>
+      <View style={styles.tradeImpact}>
+        <View style={styles.tradeImpactItem}>
+          <Text style={styles.tradeImpactLabel}>Your delta</Text>
+          <Text
+            style={[
+              styles.tradeImpactValue,
+              item.teamADelta >= 0 ? styles.deltaPositive : styles.deltaNegative,
+            ]}
+          >
+            {formatDelta(item.teamADelta)}
+          </Text>
+        </View>
+        <View style={styles.tradeImpactDivider} />
+        <View style={styles.tradeImpactItem}>
+          <Text style={styles.tradeImpactLabel}>Their delta</Text>
+          <Text
+            style={[
+              styles.tradeImpactValue,
+              item.teamBDelta >= 0 ? styles.deltaPositive : styles.deltaNegative,
+            ]}
+          >
+            {formatDelta(item.teamBDelta)}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function TradeDashboard({
   leagueId,
   reloadToken = 0,
@@ -67,6 +173,8 @@ export default function TradeDashboard({
   workshopOwner,
   setWorkshopOwner,
 }) {
+  const width = useWindowWidth();
+  const desktop = isDataTableWidth(width);
   const [loading, setLoading] = useState(Boolean(leagueId));
   const [trades, setTrades] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -122,12 +230,15 @@ export default function TradeDashboard({
   }, [leagueId, mode, reloadToken]);
 
   if (loading) {
-    return <ActivityIndicator testID="loading" />;
+    return <LoadingState testID="loading" label="Finding trade ideas" />;
   }
 
   if (!leagueId) {
     return (
-      <Text style={styles.empty}>Add a league in settings, then pick it here.</Text>
+      <EmptyState
+        title="Add a league in settings, then pick it here."
+        description="Trade recommendations will appear once a league is active."
+      />
     );
   }
 
@@ -154,7 +265,7 @@ export default function TradeDashboard({
 
   const showWorkshop = selected && workshopOwner !== "board";
   const emptyCopy = error
-    ? error
+    ? ""
     : trades.length === 0
       ? "No mutually beneficial trades."
       : visible.length === 0
@@ -162,35 +273,75 @@ export default function TradeDashboard({
         : "";
 
   return (
-    <View style={styles.table}>
-      <View style={styles.filters}>
-        <Pressable onPress={() => setMode("1for1")}>
-          <Text>1-for-1</Text>
-        </Pressable>
-        <Pressable onPress={() => setMode("2for1")}>
-          <Text>2-for-1</Text>
-        </Pressable>
-      </View>
-      <Pressable
-        onPress={() =>
-          setSort((current) =>
-            current === "fair" ? "you" : current === "you" ? "vorp" : "fair"
-          )
-        }
-      >
-        <Text>
-          {sort === "fair" ? "Fairness" : sort === "you" ? "Your gain" : "VORP"}
-        </Text>
-      </Pressable>
-      <Filters trades={trades} onOpponent={setOpponentId} onPosition={setPosition} />
-      <Header />
+    <View style={styles.dashboard}>
+      <SectionHeader
+        eyebrow="Deal finder"
+        title="Trade ideas"
+        subtitle="Explore mutually useful swaps, then take the best pitch to ESPN."
+      />
+      <Card style={styles.controls}>
+        <View style={styles.controlTop}>
+          <View style={styles.controlGroup}>
+            <Text style={styles.filterLabel}>Package</Text>
+            <View style={styles.filters}>
+              <Chip
+                testID="mode-1for1"
+                label="1-for-1"
+                selected={mode === "1for1"}
+                onPress={() => setMode("1for1")}
+              />
+              <Chip
+                testID="mode-2for1"
+                label="2-for-1"
+                selected={mode === "2for1"}
+                onPress={() => setMode("2for1")}
+              />
+            </View>
+          </View>
+          <View style={styles.sortGroup}>
+            <Text style={styles.filterLabel}>Rank by</Text>
+            <Chip
+              label={
+                sort === "fair"
+                  ? "Fairness"
+                  : sort === "you"
+                    ? "Your gain"
+                    : "VORP"
+              }
+              onPress={() =>
+                setSort((current) =>
+                  current === "fair"
+                    ? "you"
+                    : current === "you"
+                      ? "vorp"
+                      : "fair"
+                )
+              }
+            />
+          </View>
+        </View>
+        <Filters
+          trades={trades}
+          opponentId={opponentId}
+          position={position}
+          onOpponent={setOpponentId}
+          onPosition={setPosition}
+        />
+      </Card>
       {error ? (
-        <Pressable onPress={() => onReload?.()}>
-          <Text>Retry</Text>
-        </Pressable>
+        <InlineBanner
+          tone="danger"
+          title="Trade feed unavailable"
+          message={error}
+          actionLabel="Retry"
+          onAction={() => onReload?.()}
+        />
       ) : null}
-      {emptyCopy ? (
-        <Text style={styles.empty}>{emptyCopy}</Text>
+      {error ? null : emptyCopy ? (
+        <EmptyState
+          title={emptyCopy}
+          description="Try another package, opponent, or position filter."
+        />
       ) : showWorkshop ? (
         <Workshop
           trade={selected}
@@ -202,58 +353,231 @@ export default function TradeDashboard({
           leagueId={leagueId}
           onReload={onReload}
         />
+      ) : desktop ? (
+        <Card testID="trade-table" style={styles.table}>
+          <Header />
+          {visible.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Trade ${item.send} for ${item.receive} with ${item.teamBName}`}
+              onPress={() => {
+                setSelected(item);
+                setWorkshopOwner?.("trades");
+              }}
+              style={({ pressed }) => [
+                styles.row,
+                pressed && styles.tradePressed,
+              ]}
+            >
+              <Text style={styles.cell}>{item.send}</Text>
+              <Text style={styles.cell}>{item.receive}</Text>
+              <Text style={styles.cell}>{item.teamBName}</Text>
+              <Text
+                style={[
+                  styles.cell,
+                  styles.deltaCell,
+                  item.teamADelta >= 0
+                    ? styles.deltaPositive
+                    : styles.deltaNegative,
+                ]}
+              >
+                {formatDelta(item.teamADelta)}
+              </Text>
+              <Text
+                style={[
+                  styles.cell,
+                  styles.deltaCell,
+                  item.teamBDelta >= 0
+                    ? styles.deltaPositive
+                    : styles.deltaNegative,
+                ]}
+              >
+                {formatDelta(item.teamBDelta)}
+              </Text>
+            </Pressable>
+          ))}
+        </Card>
       ) : (
-        visible.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => {
-              setSelected(item);
-              setWorkshopOwner?.("trades");
-            }}
-            style={styles.row}
-          >
-            <Text style={styles.cell}>{item.send}</Text>
-            <Text style={styles.cell}>{item.receive}</Text>
-            <Text style={styles.cell}>{item.teamBName}</Text>
-            <Text style={styles.cell}>{formatDelta(item.teamADelta)}</Text>
-            <Text style={styles.cell}>{formatDelta(item.teamBDelta)}</Text>
-          </Pressable>
-        ))
+        <View testID="trade-cards" style={styles.tradeCards}>
+          {visible.map((item) => (
+            <TradeCard
+              key={item.id}
+              item={item}
+              onPress={() => {
+                setSelected(item);
+                setWorkshopOwner?.("trades");
+              }}
+            />
+          ))}
+        </View>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  table: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  dashboard: {
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
-  row: {
+  controls: {
+    gap: spacing.lg,
+    backgroundColor: colors.surfaceRaised,
+  },
+  controlTop: {
     flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e4e4e7",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: spacing.md,
   },
-  header: {
-    backgroundColor: "#f4f4f5",
+  controlGroup: {
+    flex: 1,
+    minWidth: 210,
+    gap: spacing.sm,
   },
-  headerText: {
-    fontWeight: "700",
+  sortGroup: {
+    gap: spacing.sm,
+  },
+  filterGroups: {
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  filterGroup: {
+    gap: spacing.sm,
+  },
+  filterLabel: {
+    ...typography.sectionLabel,
+    color: colors.textMuted,
   },
   filters: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: spacing.sm,
+  },
+  table: {
+    padding: 0,
+    overflow: "hidden",
+  },
+  row: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
+  header: {
+    minHeight: 46,
+    backgroundColor: colors.surfaceMuted,
+  },
+  headerText: {
+    ...typography.sectionLabel,
+    color: colors.textMuted,
   },
   cell: {
     flex: 1,
+    minWidth: 0,
+    ...typography.caption,
+    color: colors.textSecondary,
   },
-  empty: {
-    padding: 16,
-    color: "#52525b",
+  deltaCell: {
+    ...typography.stat,
+  },
+  tradeCards: {
+    gap: spacing.md,
+  },
+  tradeCard: {
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    gap: spacing.lg,
+  },
+  tradePressed: {
+    opacity: 0.72,
+    backgroundColor: colors.surfaceRaised,
+  },
+  tradeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  tradeCardEyebrow: {
+    ...typography.sectionLabel,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  tradeOpponent: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  tradeDeltaPair: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  tradeFlow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  tradeSide: {
+    flex: 1,
+    minWidth: 0,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.canvasMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tradeSideLabel: {
+    ...typography.sectionLabel,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
+  tradePlayer: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  tradeArrow: {
+    color: colors.info,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  tradeImpact: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  tradeImpactItem: {
+    flex: 1,
+  },
+  tradeImpactDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.md,
+  },
+  tradeImpactLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  tradeImpactValue: {
+    ...typography.stat,
+    marginTop: 2,
+  },
+  deltaPositive: {
+    color: colors.success,
+  },
+  deltaNegative: {
+    color: colors.danger,
   },
 });

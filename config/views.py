@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -40,8 +41,8 @@ def health(_request):
 
 def _complete_league(row):
     league_id = str(row.get("leagueId") or "").strip()
-    espn_s2 = str(row.get("espn_s2") or "").strip()
-    swid = str(row.get("swid") or "").strip()
+    espn_s2 = str(row.get("espn_s2") or "").strip() or settings.ESPN_S2
+    swid = str(row.get("swid") or "").strip() or settings.ESPN_SWID
     if not league_id or not espn_s2 or not swid:
         return None
     return {"leagueId": int(league_id), "espn_s2": espn_s2, "swid": swid}
