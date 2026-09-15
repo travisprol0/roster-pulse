@@ -271,7 +271,16 @@ def league(request):
         )
     )
     return _json(
-        {"youTeamId": you_id, "teams": teams, "fetchedAt": snapshot.fetched_at}
+        {
+            "youTeamId": you_id,
+            "teams": teams,
+            "fetchedAt": snapshot.fetched_at,
+            **(
+                {"error": "cookies did not match a team"}
+                if you_id is None and teams
+                else {}
+            ),
+        }
     )
 
 

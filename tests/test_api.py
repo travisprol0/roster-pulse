@@ -350,6 +350,23 @@ def test_league_endpoint_includes_fetched_at(client):
 
 
 @pytest.mark.django_db
+def test_league_endpoint_swid_miss_sets_error_when_teams_exist(client):
+    _seed_league()
+    account = EspnAccount.objects.get()
+    account.swid = "{NO-MATCH}"
+    account.save()
+
+    response = client.get(f"/api/league/?league_id={LEAGUE_ID}")
+    body = response.json()
+    assert response.status_code == 200
+    assert body["youTeamId"] is None
+    assert body["teams"]
+    assert body["error"] == "cookies did not match a team"
+    assert "espn_s2" not in body["error"]
+    assert account.swid not in body["error"]
+
+
+@pytest.mark.django_db
 def test_evaluate_endpoint_400_when_players_not_on_the_two_teams(client):
     _seed_league()
     missing = client.get(

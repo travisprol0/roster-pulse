@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { saveEspnCredentials } from "../api/espnCredentials";
 import SettingsScreen from "../screens/SettingsScreen";
@@ -67,4 +67,24 @@ test("submitting two league blocks sends cookies per league", () => {
       { leagueId: "222", espn_s2: "s2-b", swid: "{B}" },
     ],
   });
+});
+
+test("shows unauthorized copy without cookie values", async () => {
+  saveEspnCredentials.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      leagues: [{ league_id: 111, account_id: null, status: "unauthorized" }],
+    }),
+  });
+
+  const { getByPlaceholderText, getByText } = render(<SettingsScreen />);
+  fireEvent.changeText(getByPlaceholderText("League ID 1"), "111");
+  fireEvent.changeText(getByPlaceholderText("espn_s2"), "s2-secret");
+  fireEvent.changeText(getByPlaceholderText("swid"), "{SWID-SECRET}");
+  fireEvent.press(getByText("Submit"));
+
+  const message = await waitFor(() => getByText("Could not sync: unauthorized"));
+  expect(message).toBeTruthy();
+  expect(String(message.props.children)).not.toMatch(/s2-secret/);
+  expect(String(message.props.children)).not.toMatch(/SWID-SECRET/);
 });

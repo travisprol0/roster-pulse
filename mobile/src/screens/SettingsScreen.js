@@ -10,6 +10,7 @@ function emptyLeague() {
 export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
   const [leagues, setLeagues] = useState([emptyLeague()]);
   const [expanded, setExpanded] = useState(savedLeagues.length === 0);
+  const [syncError, setSyncError] = useState("");
 
   useEffect(() => {
     setExpanded(savedLeagues.length === 0);
@@ -52,7 +53,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
     }).catch(() => {});
     // #endregion
     saveEspnCredentials({ leagues })
-      .then((response) => {
+      .then(async (response) => {
         // #region agent log
         fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
           method: "POST",
@@ -70,6 +71,14 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
           }),
         }).catch(() => {});
         // #endregion
+        let body = {};
+        if (typeof response?.json === "function") {
+          body = await response.json();
+        }
+        const unauthorized = (body.leagues || []).some(
+          (row) => row.status === "unauthorized"
+        );
+        setSyncError(unauthorized ? "Could not sync: unauthorized" : "");
         onSaved?.();
       })
       .catch((err) => {
@@ -100,6 +109,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
           Leagues / cookies
         </Text>
       </Pressable>
+      {syncError ? <Text>{syncError}</Text> : null}
       {expanded ? (
         <>
           {leagues.map((league, index) => (

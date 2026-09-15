@@ -13,14 +13,14 @@
 
 ## Scope
 
-- [ ] Credentials POST already returns `unauthorized` per league; surface it in settings.
-- [ ] `GET /api/league/` includes `error` or `youTeamId` null warning when snapshot exists but SWID matches no `primaryOwner`.
-- [ ] Jest: copy visible for those states.
+- [x] Credentials POST already returns `unauthorized` per league; surface it in settings.
+- [x] `GET /api/league/` includes `error` or `youTeamId` null warning when snapshot exists but SWID matches no `primaryOwner`.
+- [x] Jest: copy visible for those states.
 
 ## Acceptance criteria
 
-- [ ] Pytest: snapshot with no matching SWID → JSON makes the miss detectable (not only empty teams).
-- [ ] Jest: user-visible string for unauthorized and for “cookies did not match a team.”
+- [x] Pytest: snapshot with no matching SWID → JSON makes the miss detectable (not only empty teams).
+- [x] Jest: user-visible string for unauthorized and for “cookies did not match a team.”
 
 ## Pipeline (mandatory)
 

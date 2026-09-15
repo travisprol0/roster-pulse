@@ -171,6 +171,7 @@ export default function LeagueBoard({ leagueId }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("slot");
   const [fetchedAt, setFetchedAt] = useState("");
+  const [boardError, setBoardError] = useState("");
 
   useEffect(() => {
     if (!leagueId) {
@@ -182,6 +183,7 @@ export default function LeagueBoard({ leagueId }) {
       setQuery("");
       setSort("slot");
       setFetchedAt("");
+      setBoardError("");
       return;
     }
     setLoading(true);
@@ -194,6 +196,7 @@ export default function LeagueBoard({ leagueId }) {
         setQuery("");
         setSort("slot");
         setFetchedAt(data.fetchedAt || "");
+        setBoardError(data.error || "");
         setLoading(false);
       })
       .catch(() => {
@@ -204,6 +207,7 @@ export default function LeagueBoard({ leagueId }) {
         setQuery("");
         setSort("slot");
         setFetchedAt("");
+        setBoardError("");
         setLoading(false);
       });
   }, [leagueId]);
@@ -274,6 +278,7 @@ export default function LeagueBoard({ leagueId }) {
         <Text onPress={() => refreshLeague(leagueId)}>Refresh</Text>
       </Pressable>
       {fetchedAt ? <Text>{fetchedAt}</Text> : null}
+      {boardError ? <Text>{boardError}</Text> : null}
       {workshop ? (
         <Workshop trade={workshop} onClear={clearSelection} />
       ) : null}

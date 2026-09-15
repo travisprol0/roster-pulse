@@ -362,6 +362,20 @@ test("shows last synced time from fetchedAt", async () => {
   expect(await findByText("2026-09-15T12:00:00Z")).toBeTruthy();
 });
 
+test("shows cookies did not match a team when youTeamId is null and teams exist", async () => {
+  fetchLeague.mockResolvedValueOnce({
+    ...board,
+    youTeamId: null,
+    error: "cookies did not match a team",
+    teams: board.teams.map((team) => ({ ...team, isYou: false })),
+  });
+
+  const { findByText, queryByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("cookies did not match a team")).toBeTruthy();
+  expect(queryByText(/espn_s2/i)).toBeNull();
+  expect(queryByText(/SWID/i)).toBeNull();
+});
+
 test("injured starter row is marked and healthy row is not", async () => {
   fetchLeague.mockResolvedValueOnce(board);
 
