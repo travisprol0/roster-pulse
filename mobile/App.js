@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { fetchLeagues } from "./src/api/leagues";
 import { isDesktopWidth } from "./src/layout";
@@ -15,28 +24,19 @@ export default function App() {
   const desktop = isDesktopWidth(width);
   const [leagues, setLeagues] = useState([]);
   const [leagueId, setLeagueId] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [loadError, setLoadError] = useState("");
+  const [workshopOwner, setWorkshopOwner] = useState(null);
+
+  function bump() {
+    setReloadToken((current) => current + 1);
+  }
 
   function loadLeagues() {
     return fetchLeagues()
       .then((data) => {
         const next = data.leagues || [];
-        // #region agent log
-        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "1de000",
-          },
-          body: JSON.stringify({
-            sessionId: "1de000",
-            hypothesisId: "D",
-            location: "App.js:loadLeagues",
-            message: "leagues loaded",
-            data: { count: next.length, ids: next.map((row) => row.id) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
+        setLoadError("");
         setLeagues(next);
         setLeagueId((current) => {
           if (current && next.some((league) => league.id === current)) {
@@ -45,24 +45,8 @@ export default function App() {
           return next[0] ? next[0].id : null;
         });
       })
-      .catch((err) => {
-        // #region agent log
-        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "1de000",
-          },
-          body: JSON.stringify({
-            sessionId: "1de000",
-            hypothesisId: "D",
-            location: "App.js:loadLeagues.catch",
-            message: "fetchLeagues rejected",
-            data: { text: String(err) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
+      .catch(() => {
+        setLoadError("Could not reach API");
       });
   }
 
@@ -71,39 +55,79 @@ export default function App() {
   }, []);
 
   return (
-    <ScrollView
-      testID="app-scroll"
-      style={styles.page}
-      contentContainerStyle={styles.inner}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>Roster Pulse</Text>
-      <Text style={styles.subtitle}>
-        League intel and mutually beneficial 1-for-1 trades from your ESPN roster.
-      </Text>
-      <View
-        testID="app-layout"
-        style={[styles.layout, desktop ? styles.layoutWide : styles.layoutNarrow]}
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={desktop ? styles.sidebar : styles.stackSection}>
-          <SettingsScreen onSaved={loadLeagues} savedLeagues={leagues} />
-        </View>
-        <View style={desktop ? styles.main : styles.stackSection}>
-          <LeagueSwitcher
-            leagues={leagues}
-            selectedId={leagueId}
-            onSelect={setLeagueId}
-          />
-          <LeagueBoard leagueId={leagueId} />
-          <TradeDashboard leagueId={leagueId} />
-        </View>
-      </View>
-      <StatusBar style="auto" />
-    </ScrollView>
+        <ScrollView
+          testID="app-scroll"
+          style={styles.page}
+          contentContainerStyle={styles.inner}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Roster Pulse</Text>
+          <Text style={styles.subtitle}>
+            League intel, waivers, and trades from your ESPN roster.
+          </Text>
+          {loadError ? (
+            <View>
+              <Text>{loadError}</Text>
+              <Pressable onPress={loadLeagues}>
+                <Text>Retry</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          <View
+            testID="app-layout"
+            style={[styles.layout, desktop ? styles.layoutWide : styles.layoutNarrow]}
+          >
+            <View style={desktop ? styles.sidebar : styles.stackSection}>
+              <SettingsScreen
+                key={leagues.map((league) => String(league.id)).join(",") || "empty"}
+                onSaved={() => {
+                  loadLeagues().then(bump);
+                }}
+                savedLeagues={leagues}
+              />
+            </View>
+            <View style={desktop ? styles.main : styles.stackSection}>
+              <LeagueSwitcher
+                leagues={leagues}
+                selectedId={leagueId}
+                onSelect={setLeagueId}
+              />
+              <LeagueBoard
+                leagueId={leagueId}
+                reloadToken={reloadToken}
+                onReload={bump}
+                workshopOwner={workshopOwner}
+                setWorkshopOwner={setWorkshopOwner}
+              />
+              <TradeDashboard
+                leagueId={leagueId}
+                reloadToken={reloadToken}
+                onReload={bump}
+                workshopOwner={workshopOwner}
+                setWorkshopOwner={setWorkshopOwner}
+              />
+            </View>
+          </View>
+          <StatusBar style="auto" />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "#f4f4f5",
+  },
+  flex: {
+    flex: 1,
+  },
   page: {
     flex: 1,
     backgroundColor: "#f4f4f5",

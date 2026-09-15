@@ -17,6 +17,7 @@ class LeagueSettings(models.Model):
     name = models.CharField(max_length=255)
     scoring_rules = models.JSONField()
     roster_sizes = models.JSONField()
+    current_week = models.PositiveSmallIntegerField(default=1)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

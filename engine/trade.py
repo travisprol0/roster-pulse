@@ -1,5 +1,7 @@
 from itertools import combinations
 
+from engine.lineup import fill_starters
+
 
 def player_ros_points(player, scoring):
     stats = player.get("stats") or {}
@@ -19,15 +21,13 @@ def vorp(player, pool, scoring, league_size, starters):
 
 
 def starting_ros(roster, scoring, slots):
-    total = 0
-    for position, count in slots.items():
-        ranked = sorted(
-            (p for p in roster if p["position"] == position),
-            key=lambda p: player_ros_points(p, scoring),
-            reverse=True,
-        )
-        total += sum(player_ros_points(p, scoring) for p in ranked[:count])
-    return total
+    def score(player):
+        return player_ros_points(player, scoring)
+
+    return sum(
+        player_ros_points(player, scoring)
+        for player in fill_starters(roster, slots, score)
+    )
 
 
 def _apply_trade(roster, sending, receiving):

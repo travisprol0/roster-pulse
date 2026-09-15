@@ -17,12 +17,16 @@ Before finishing **any epic ticket**, update [PROGRESS.md](PROGRESS.md): status,
 - Mock ESPN (`unittest.mock` / `responses`). No live network in tests.
 
 ```text
-./test.sh                 # user runs — pytest + coverage reports
-pytest tests/…            # user runs — same coverage via pytest.ini
-cd mobile && npm test     # user runs
+./test.sh                 # user runs — creates .venv if needed, backend then frontend coverage
+./test.sh backend         # pytest only (project .venv)
+./test.sh frontend        # Jest only
 ```
 
-After a green pytest run: terminal missing-lines, `htmlcov/index.html`, and (via `./test.sh`) `coverage/missing_python_coverage_lines.md`.
+Do not use system `pip` or system `pytest` (PEP 668). `./test.sh` installs into `.venv`.
+
+After a green backend run: terminal missing-lines, `htmlcov/index.html`, and `coverage/missing_python_coverage_lines.md`.
+
+After a green frontend run: terminal summary, `mobile/coverage/lcov-report/index.html`, and `coverage/missing_js_coverage_lines.md`.
 
 ---
 

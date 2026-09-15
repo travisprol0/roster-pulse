@@ -9,14 +9,17 @@ import LeagueBoard from "../screens/LeagueBoard";
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(() => Promise.resolve({ youTeamId: null, teams: [] })),
   refreshLeague: jest.fn(() => Promise.resolve({ fetchedAt: "2026-09-15T12:00:00Z" })),
+  setLineup: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock("../api/evaluate", () => ({
   fetchEvaluate: jest.fn(),
+  proposeTrade: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock("../api/waivers", () => ({
   fetchWaivers: jest.fn(() => Promise.resolve({ waivers: [] })),
+  claimWaiver: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock(
@@ -119,7 +122,7 @@ test("renders standings and roster rows for every team", async () => {
   expect(getByText("PF 412.2")).toBeTruthy();
   expect(getByText("PA 380.1")).toBeTruthy();
   expect(getByText("Seed 2")).toBeTruthy();
-  expect(getByText("Waivers 5")).toBeTruthy();
+  expect(getByText("Waiver rank 5")).toBeTruthy();
   expect(getByText("Other Team")).toBeTruthy();
   expect(getByText("1-3-0")).toBeTruthy();
   expect(getByText("Bench RB")).toBeTruthy();

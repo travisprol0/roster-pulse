@@ -4,7 +4,11 @@ import { saveEspnCredentials } from "../api/espnCredentials";
 import SettingsScreen from "../screens/SettingsScreen";
 
 jest.mock("../api/espnCredentials", () => ({
-  saveEspnCredentials: jest.fn(() => Promise.resolve()),
+  saveEspnCredentials: jest.fn(() => Promise.resolve({ leagues: [{ status: "ok" }] })),
+}));
+
+jest.mock("../api/leagues", () => ({
+  deleteLeague: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 test("shows a league block with league id and both cookies", () => {
@@ -88,10 +92,7 @@ test("Submit payload includes the chosen season", () => {
 
 test("shows unauthorized copy without cookie values", async () => {
   saveEspnCredentials.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      leagues: [{ league_id: 111, account_id: null, status: "unauthorized" }],
-    }),
+    leagues: [{ league_id: 111, account_id: null, status: "unauthorized" }],
   });
 
   const { getByPlaceholderText, getByText } = render(<SettingsScreen />);

@@ -1,5 +1,16 @@
 POSITION_BY_ID = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "DST"}
-SLOT_TO_POSITION = {"0": "QB", "2": "RB", "4": "WR", "6": "TE"}
+SLOT_TO_POSITION = {
+    "0": "QB",
+    "2": "RB",
+    "3": "RB/WR",
+    "4": "WR",
+    "5": "WR/TE",
+    "6": "TE",
+    "7": "OP",
+    "16": "DST",
+    "17": "K",
+    "23": "FLEX",
+}
 SLOT_BY_ID = {
     0: "QB",
     2: "RB",
@@ -43,6 +54,7 @@ def normalize_player(entry):
         "injury": player.get("injuryStatus") or "",
         "projectedPts": projected,
         "actualPts": _applied_total(player, 0),
+        "bye_week": player.get("byeWeek") or player.get("bye_week"),
         "stats": {"pts": projected},
     }
 
@@ -52,7 +64,12 @@ def normalize_team(team):
     players = [player for player in (normalize_player(entry) for entry in entries) if player]
     return {
         "id": team.get("id"),
-        "name": team.get("name") or team.get("abbrev") or "",
+        "name": " ".join(
+            part for part in (team.get("location"), team.get("nickname")) if part
+        ).strip()
+        or team.get("name")
+        or team.get("abbrev")
+        or "",
         "primaryOwner": team.get("primaryOwner"),
         "players": players,
     }
@@ -85,9 +102,14 @@ def normalize_free_agents(payload, rostered_ids=None):
     return players
 
 
+def _norm_swid(value):
+    return str(value or "").replace("{", "").replace("}", "").strip().upper()
+
+
 def user_team(teams, swid):
+    wanted = _norm_swid(swid)
     for team in teams:
-        if team.get("primaryOwner") == swid:
+        if _norm_swid(team.get("primaryOwner")) == wanted:
             return team
     return None
 
@@ -97,6 +119,8 @@ def starter_slots(roster_settings):
     slots = {}
     for slot_id, position in SLOT_TO_POSITION.items():
         count = counts.get(slot_id)
+        if count is None and slot_id.isdigit():
+            count = counts.get(int(slot_id))
         if count:
             slots[position] = count
     return slots or {"QB": 1, "RB": 2, "WR": 2, "TE": 1}

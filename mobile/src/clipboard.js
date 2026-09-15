@@ -1,6 +1,20 @@
-export function copyText(text) {
+import { Platform } from "react-native";
+
+export async function copyText(text) {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    return navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(text);
+    return;
   }
-  return Promise.resolve();
+  if (Platform.OS !== "web") {
+    try {
+      const Clipboard = require("expo-clipboard");
+      if (Clipboard.setStringAsync) {
+        await Clipboard.setStringAsync(text);
+        return;
+      }
+    } catch {
+      /* optional */
+    }
+  }
+  throw new Error("clipboard unavailable");
 }

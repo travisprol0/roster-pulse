@@ -1,6 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function LeagueSwitcher({ leagues, onSelect, selectedId }) {
+  if (!leagues.length) {
+    return (
+      <Text testID="league-switcher" style={styles.empty}>
+        Add a league in settings, then pick it here.
+      </Text>
+    );
+  }
   return (
     <View testID="league-switcher" style={styles.row}>
       {leagues.map((league) => {
@@ -24,6 +31,10 @@ export default function LeagueSwitcher({ leagues, onSelect, selectedId }) {
 }
 
 const styles = StyleSheet.create({
+  empty: {
+    paddingBottom: 12,
+    color: "#52525b",
+  },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -8,7 +8,7 @@ from tests.conftest import LEAGUE_ID, SEASON, SWID
 
 
 def _mock_roster_and_team(mock_get, roster_payload, team_payload=None):
-    def side_effect(url, params=None, headers=None):
+    def side_effect(url, params=None, headers=None, **_kwargs):
         response = MagicMock()
         response.status_code = 200
         view = (params or {}).get("view")
@@ -78,3 +78,55 @@ def test_sync_roster_merges_mteam_standings(
     assert team["pointsAgainst"] == 380.1
     assert team["playoffSeed"] == 2
     assert team["waiverRank"] == 5
+
+
+@pytest.mark.django_db
+@patch("espn.client.requests.get")
+def test_sync_roster_copies_primary_owner_from_mteam(
+    mock_get, espn_client, mroster_payload, mteam_payload
+):
+    roster = {
+        **mroster_payload,
+        "teams": [{**mroster_payload["teams"][0], "primaryOwner": None}],
+    }
+    team_payload = {
+        **mteam_payload,
+        "teams": [{**mteam_payload["teams"][0], "primaryOwner": SWID}],
+    }
+    _mock_roster_and_team(mock_get, roster, team_payload)
+
+    sync_roster(espn_client)
+
+    assert RosterSnapshot.objects.get().teams[0]["primaryOwner"] == SWID
+
+
+@pytest.mark.django_db
+@patch("espn.client.requests.get")
+def test_sync_roster_copies_name_from_mteam(
+    mock_get, espn_client, mroster_payload, mteam_payload
+):
+    roster = {
+        **mroster_payload,
+        "teams": [
+            {
+                **mroster_payload["teams"][0],
+                "name": None,
+                "abbrev": None,
+            }
+        ],
+    }
+    team_payload = {
+        **mteam_payload,
+        "teams": [
+            {
+                **mteam_payload["teams"][0],
+                "location": "Gotham",
+                "nickname": "Knights",
+            }
+        ],
+    }
+    _mock_roster_and_team(mock_get, roster, team_payload)
+
+    sync_roster(espn_client)
+
+    assert RosterSnapshot.objects.get().teams[0]["name"] == "Gotham Knights"

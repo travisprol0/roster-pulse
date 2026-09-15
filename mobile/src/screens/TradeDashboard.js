@@ -1,15 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fetchTrades } from "../api/trades";
-import { copyText } from "../clipboard";
+import Workshop from "./Workshop";
 
 function formatDelta(delta) {
   return delta > 0 ? `+${delta}` : `${delta}`;
-}
-
-function pitchText(trade) {
-  return `Send ${trade.send} to ${trade.teamBName} for ${trade.receive}. Your delta ${trade.teamADelta}, their delta ${trade.teamBDelta}.`;
 }
 
 function Filters({ trades, onOpponent, onPosition }) {
@@ -25,7 +21,7 @@ function Filters({ trades, onOpponent, onPosition }) {
   return (
     <View style={styles.filters}>
       <Pressable testID="filter-opponent-all" onPress={() => onOpponent("all")}>
-        <Text onPress={() => onOpponent("all")}>All opponents</Text>
+        <Text>All opponents</Text>
       </Pressable>
       {opponents.map((opponent) => (
         <Pressable
@@ -33,19 +29,19 @@ function Filters({ trades, onOpponent, onPosition }) {
           testID={`filter-opponent-${opponent.id}`}
           onPress={() => onOpponent(opponent.id)}
         >
-          <Text onPress={() => onOpponent(opponent.id)}>vs {opponent.name}</Text>
+          <Text>vs {opponent.name}</Text>
         </Pressable>
       ))}
       <Pressable testID="filter-position-all" onPress={() => onPosition("all")}>
-        <Text onPress={() => onPosition("all")}>All positions</Text>
+        <Text>All positions</Text>
       </Pressable>
-      {["QB", "RB", "WR", "TE"].map((pos) => (
+      {["QB", "RB", "WR", "TE", "K", "DST"].map((pos) => (
         <Pressable
           key={pos}
           testID={`filter-position-${pos}`}
           onPress={() => onPosition(pos)}
         >
-          <Text onPress={() => onPosition(pos)}>{pos}</Text>
+          <Text>{pos}</Text>
         </Pressable>
       ))}
     </View>
@@ -64,30 +60,13 @@ function Header() {
   );
 }
 
-function Workshop({ trade, onDismiss }) {
-  return (
-    <View style={styles.workshop}>
-      <Text style={styles.workshopTitle}>Workshop</Text>
-      <Text>{trade.teamBName}</Text>
-      <Text>{trade.send}</Text>
-      <Text>{trade.receive}</Text>
-      <Text>{formatDelta(trade.teamADelta)}</Text>
-      <Text>{formatDelta(trade.teamBDelta)}</Text>
-      <Text>{trade.beforeA}</Text>
-      <Text>{trade.afterA}</Text>
-      <Text>{trade.beforeB}</Text>
-      <Text>{trade.afterB}</Text>
-      <Pressable onPress={() => copyText(pitchText(trade))}>
-        <Text onPress={() => copyText(pitchText(trade))}>Copy pitch</Text>
-      </Pressable>
-      <Pressable onPress={onDismiss}>
-        <Text onPress={onDismiss}>Dismiss</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-export default function TradeDashboard({ leagueId }) {
+export default function TradeDashboard({
+  leagueId,
+  reloadToken = 0,
+  onReload,
+  workshopOwner,
+  setWorkshopOwner,
+}) {
   const [loading, setLoading] = useState(Boolean(leagueId));
   const [trades, setTrades] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -95,6 +74,8 @@ export default function TradeDashboard({ leagueId }) {
   const [position, setPosition] = useState("all");
   const [sort, setSort] = useState("fair");
   const [mode, setMode] = useState("1for1");
+  const [error, setError] = useState("");
+  const seq = useRef(0);
 
   useEffect(() => {
     if (!leagueId) {
@@ -105,14 +86,21 @@ export default function TradeDashboard({ leagueId }) {
       setPosition("all");
       setSort("fair");
       setMode("1for1");
+      setError("");
       return;
     }
+    const token = seq.current + 1;
+    seq.current = token;
     setLoading(true);
     const request =
       mode === "2for1" ? fetchTrades(leagueId, "2for1") : fetchTrades(leagueId);
     request
       .then((data) => {
-        setTrades(data.trades);
+        if (seq.current !== token) {
+          return;
+        }
+        setTrades(data.trades || []);
+        setError(data.error || "");
         setSelected(null);
         setOpponentId("all");
         setPosition("all");
@@ -120,14 +108,18 @@ export default function TradeDashboard({ leagueId }) {
         setLoading(false);
       })
       .catch(() => {
+        if (seq.current !== token) {
+          return;
+        }
         setTrades([]);
         setSelected(null);
         setOpponentId("all");
         setPosition("all");
         setSort("fair");
+        setError("Could not load trades");
         setLoading(false);
       });
-  }, [leagueId, mode]);
+  }, [leagueId, mode, reloadToken]);
 
   if (loading) {
     return <ActivityIndicator testID="loading" />;
@@ -152,50 +144,75 @@ export default function TradeDashboard({ leagueId }) {
     if (sort === "you") {
       return b.teamADelta - a.teamADelta;
     }
+    if (sort === "vorp") {
+      return (b.teamADelta || 0) - (a.teamADelta || 0);
+    }
     return (
       Math.min(b.teamADelta, b.teamBDelta) - Math.min(a.teamADelta, a.teamBDelta)
     );
   });
 
+  const showWorkshop = selected && workshopOwner !== "board";
+  const emptyCopy = error
+    ? error
+    : trades.length === 0
+      ? "No mutually beneficial trades."
+      : visible.length === 0
+        ? "No trades match filters."
+        : "";
+
   return (
     <View style={styles.table}>
       <View style={styles.filters}>
         <Pressable onPress={() => setMode("1for1")}>
-          <Text onPress={() => setMode("1for1")}>1-for-1</Text>
+          <Text>1-for-1</Text>
         </Pressable>
         <Pressable onPress={() => setMode("2for1")}>
-          <Text onPress={() => setMode("2for1")}>2-for-1</Text>
+          <Text>2-for-1</Text>
         </Pressable>
       </View>
       <Pressable
-        onPress={() => setSort((current) => (current === "fair" ? "you" : "fair"))}
+        onPress={() =>
+          setSort((current) =>
+            current === "fair" ? "you" : current === "you" ? "vorp" : "fair"
+          )
+        }
       >
-        <Text
-          onPress={() => setSort((current) => (current === "fair" ? "you" : "fair"))}
-        >
-          {sort === "fair" ? "Fairness" : "Your gain"}
+        <Text>
+          {sort === "fair" ? "Fairness" : sort === "you" ? "Your gain" : "VORP"}
         </Text>
       </Pressable>
-      <Filters
-        trades={trades}
-        onOpponent={setOpponentId}
-        onPosition={setPosition}
-      />
+      <Filters trades={trades} onOpponent={setOpponentId} onPosition={setPosition} />
       <Header />
-      {trades.length === 0 ? (
-        <Text style={styles.empty}>No mutually beneficial trades.</Text>
-      ) : selected ? (
-        <Workshop trade={selected} onDismiss={() => setSelected(null)} />
+      {error ? (
+        <Pressable onPress={() => onReload?.()}>
+          <Text>Retry</Text>
+        </Pressable>
+      ) : null}
+      {emptyCopy ? (
+        <Text style={styles.empty}>{emptyCopy}</Text>
+      ) : showWorkshop ? (
+        <Workshop
+          trade={selected}
+          onClear={() => {
+            setSelected(null);
+            setWorkshopOwner?.(null);
+          }}
+          clearLabel="Dismiss"
+          leagueId={leagueId}
+          onReload={onReload}
+        />
       ) : (
         visible.map((item) => (
           <Pressable
             key={item.id}
-            onPress={() => setSelected(item)}
+            onPress={() => {
+              setSelected(item);
+              setWorkshopOwner?.("trades");
+            }}
             style={styles.row}
           >
-            <Text style={styles.cell} onPress={() => setSelected(item)}>
-              {item.send}
-            </Text>
+            <Text style={styles.cell}>{item.send}</Text>
             <Text style={styles.cell}>{item.receive}</Text>
             <Text style={styles.cell}>{item.teamBName}</Text>
             <Text style={styles.cell}>{formatDelta(item.teamADelta)}</Text>
@@ -238,11 +255,5 @@ const styles = StyleSheet.create({
   empty: {
     padding: 16,
     color: "#52525b",
-  },
-  workshop: {
-    padding: 16,
-  },
-  workshopTitle: {
-    fontWeight: "700",
   },
 });

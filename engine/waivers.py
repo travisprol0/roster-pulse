@@ -1,6 +1,6 @@
 from engine.trade import player_ros_points
 
-STREAM_POSITIONS = ("QB", "TE")
+STREAM_POSITIONS = ("QB", "RB", "WR", "TE")
 
 
 def _starters(roster, scoring, slots):

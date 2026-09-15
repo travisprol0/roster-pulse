@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
-import { fetchLeague, refreshLeague } from "../api/league";
-import { fetchWaivers } from "../api/waivers";
-import { copyText } from "../clipboard";
-
-function formatDelta(delta) {
-  return delta > 0 ? `+${delta}` : `${delta}`;
-}
-
-function pitchText(trade) {
-  return `Send ${trade.send} to ${trade.teamBName} for ${trade.receive}. Your delta ${trade.teamADelta}, their delta ${trade.teamBDelta}.`;
-}
+import { fetchLeague, refreshLeague, setLineup } from "../api/league";
+import { claimWaiver, fetchWaivers } from "../api/waivers";
+import Workshop from "./Workshop";
 
 function recordText(record) {
   return `${record.wins}-${record.losses}-${record.ties}`;
@@ -64,38 +64,13 @@ function PlayerRow({ player, onPress, showLineup }) {
     >
       <Text style={styles.cellSlot}>{player.slot}</Text>
       <Text style={styles.cellPos}>{player.position}</Text>
-      <Text style={styles.cellName} onPress={onPress}>
-        {player.name}
-      </Text>
+      <Text style={styles.cellName}>{player.name}</Text>
       {lineup}
       <Text style={styles.cellNum}>{player.projectedPts}</Text>
       <Text style={styles.cellNum}>{player.actualPts}</Text>
       <Text style={styles.cellNum}>{player.positionRank}</Text>
       <Text style={styles.cellInjury}>{player.injury}</Text>
     </Pressable>
-  );
-}
-
-function Workshop({ trade, onClear }) {
-  return (
-    <View style={styles.workshop}>
-      <Text style={styles.workshopTitle}>Workshop</Text>
-      <Text>{trade.teamBName}</Text>
-      <Text>{trade.send}</Text>
-      <Text>{trade.receive}</Text>
-      <Text>{formatDelta(trade.teamADelta)}</Text>
-      <Text>{formatDelta(trade.teamBDelta)}</Text>
-      <Text>{trade.beforeA}</Text>
-      <Text>{trade.afterA}</Text>
-      <Text>{trade.beforeB}</Text>
-      <Text>{trade.afterB}</Text>
-      <Pressable onPress={() => copyText(pitchText(trade))}>
-        <Text onPress={() => copyText(pitchText(trade))}>Copy pitch</Text>
-      </Pressable>
-      <Pressable onPress={onClear}>
-        <Text onPress={onClear}>Clear selection</Text>
-      </Pressable>
-    </View>
   );
 }
 
@@ -116,20 +91,21 @@ function sortPlayers(players, sort) {
   return ranked.map((row) => row.player);
 }
 
+function togglePick(list, player, max) {
+  if (list.some((row) => row.id === player.id)) {
+    return list.filter((row) => row.id !== player.id);
+  }
+  return [...list, player].slice(-max);
+}
+
 function TeamCard({ team, onPlayerPress, forceExpanded }) {
   const [expanded, setExpanded] = useState(Boolean(team.isYou));
   const showRoster = forceExpanded || expanded;
 
-  function toggle() {
-    setExpanded((current) => !current);
-  }
-
   return (
     <View testID={`team-${team.id}`} style={[styles.card, team.isYou && styles.cardYou]}>
-      <Pressable onPress={toggle} style={styles.teamHead}>
-        <Text onPress={toggle} style={styles.teamName}>
-          {team.name}
-        </Text>
+      <Pressable onPress={() => setExpanded((current) => !current)} style={styles.teamHead}>
+        <Text style={styles.teamName}>{team.name}</Text>
         {team.isYou ? <Text style={styles.youBadge}>You</Text> : null}
       </Pressable>
       <View style={styles.standings}>
@@ -137,7 +113,7 @@ function TeamCard({ team, onPlayerPress, forceExpanded }) {
         <Text style={styles.meta}>PF {team.pointsFor}</Text>
         <Text style={styles.meta}>PA {team.pointsAgainst}</Text>
         {team.playoffSeed != null ? <Text style={styles.meta}>Seed {team.playoffSeed}</Text> : null}
-        {team.waiverRank != null ? <Text style={styles.meta}>Waivers {team.waiverRank}</Text> : null}
+        {team.waiverRank != null ? <Text style={styles.meta}>Waiver rank {team.waiverRank}</Text> : null}
       </View>
       <View style={styles.standings}>
         {(team.surplusNeed || []).map((tag) => (
@@ -147,91 +123,133 @@ function TeamCard({ team, onPlayerPress, forceExpanded }) {
         ))}
       </View>
       {showRoster ? (
-        <View style={styles.table}>
-          <PlayerHeader />
-          {team.players.map((player) => (
-            <PlayerRow
-              key={String(player.id)}
-              player={player}
-              showLineup={team.isYou}
-              onPress={() => onPlayerPress(player, team.isYou)}
-            />
-          ))}
-        </View>
+        <ScrollView horizontal>
+          <View>
+            <PlayerHeader />
+            {team.players.map((player) => (
+              <PlayerRow
+                key={String(player.id)}
+                player={player}
+                showLineup={team.isYou}
+                onPress={() => onPlayerPress(player, team.isYou)}
+              />
+            ))}
+          </View>
+        </ScrollView>
       ) : null}
     </View>
   );
 }
 
-export default function LeagueBoard({ leagueId }) {
+export default function LeagueBoard({
+  leagueId,
+  reloadToken = 0,
+  onReload,
+  workshopOwner,
+  setWorkshopOwner,
+}) {
   const [loading, setLoading] = useState(Boolean(leagueId));
   const [teams, setTeams] = useState([]);
-  const [youPlayer, setYouPlayer] = useState(null);
-  const [themPlayer, setThemPlayer] = useState(null);
+  const [youPlayers, setYouPlayers] = useState([]);
+  const [themPlayers, setThemPlayers] = useState([]);
   const [workshop, setWorkshop] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("slot");
   const [fetchedAt, setFetchedAt] = useState("");
   const [boardError, setBoardError] = useState("");
   const [waivers, setWaivers] = useState([]);
+  const [suggested, setSuggested] = useState(null);
+  const seq = useRef(0);
 
-  useEffect(() => {
+  function loadBoard() {
     if (!leagueId) {
       setLoading(false);
       setTeams([]);
-      setYouPlayer(null);
-      setThemPlayer(null);
+      setYouPlayers([]);
+      setThemPlayers([]);
       setWorkshop(null);
       setQuery("");
       setSort("slot");
       setFetchedAt("");
       setBoardError("");
       setWaivers([]);
+      setSuggested(null);
       return;
     }
+    const token = seq.current + 1;
+    seq.current = token;
     setLoading(true);
     Promise.all([fetchLeague(leagueId), fetchWaivers(leagueId)])
       .then(([data, waiverData]) => {
+        if (seq.current !== token) {
+          return;
+        }
         setTeams(data.teams || []);
-        setYouPlayer(null);
-        setThemPlayer(null);
+        setYouPlayers([]);
+        setThemPlayers([]);
         setWorkshop(null);
         setQuery("");
         setSort("slot");
         setFetchedAt(data.fetchedAt || "");
-        setBoardError(data.error || "");
+        setBoardError(data.error || waiverData.error || "");
         setWaivers(waiverData.waivers || []);
+        setSuggested(waiverData.suggested || null);
         setLoading(false);
       })
       .catch(() => {
+        if (seq.current !== token) {
+          return;
+        }
         setTeams([]);
-        setYouPlayer(null);
-        setThemPlayer(null);
+        setYouPlayers([]);
+        setThemPlayers([]);
         setWorkshop(null);
         setQuery("");
         setSort("slot");
         setFetchedAt("");
-        setBoardError("");
+        setBoardError("Could not load league");
         setWaivers([]);
+        setSuggested(null);
         setLoading(false);
       });
-  }, [leagueId]);
+  }
+
+  useEffect(() => {
+    loadBoard();
+  }, [leagueId, reloadToken]);
 
   function onPlayerPress(player, isYou) {
-    const nextYou = isYou ? player : youPlayer;
-    const nextThem = isYou ? themPlayer : player;
-    setYouPlayer(nextYou);
-    setThemPlayer(nextThem);
-    if (!nextYou || !nextThem) {
+    const nextYou = isYou ? togglePick(youPlayers, player, 2) : youPlayers;
+    const nextThem = isYou ? themPlayers : togglePick(themPlayers, player, 2);
+    setYouPlayers(nextYou);
+    setThemPlayers(nextThem);
+    const total = nextYou.length + nextThem.length;
+    if (!nextYou.length || !nextThem.length || total > 3) {
       return;
     }
-    fetchEvaluate(leagueId, nextYou.id, nextThem.id).then(setWorkshop);
+    fetchEvaluate(
+      leagueId,
+      nextYou.map((row) => row.id).join("+"),
+      nextThem.map((row) => row.id).join("+")
+    )
+      .then((trade) => {
+        setWorkshop(trade);
+        setWorkshopOwner?.("board");
+      })
+      .catch(() => setBoardError("Could not evaluate"));
   }
 
   function clearSelection() {
-    setYouPlayer(null);
-    setThemPlayer(null);
+    setYouPlayers([]);
+    setThemPlayers([]);
     setWorkshop(null);
+    setWorkshopOwner?.(null);
+  }
+
+  function onRefresh() {
+    refreshLeague(leagueId)
+      .then(() => onReload?.())
+      .catch((err) => setBoardError(err.body?.error || "Refresh failed"));
   }
 
   if (loading) {
@@ -261,11 +279,7 @@ export default function LeagueBoard({ leagueId }) {
 
   const sortLabel = sort === "slot" ? "Sort: Slot" : sort === "proj" ? "Sort: Proj" : "Sort: Rank";
 
-  function cycleSort() {
-    setSort((current) =>
-      current === "slot" ? "proj" : current === "proj" ? "rank" : "slot"
-    );
-  }
+  const showWorkshop = workshop && workshopOwner !== "trades";
 
   return (
     <View style={styles.board}>
@@ -276,16 +290,38 @@ export default function LeagueBoard({ leagueId }) {
         autoCapitalize="none"
         style={styles.search}
       />
-      <Pressable onPress={cycleSort}>
-        <Text onPress={cycleSort}>{sortLabel}</Text>
+      <Pressable onPress={() => setSort((current) => (current === "slot" ? "proj" : current === "proj" ? "rank" : "slot"))}>
+        <Text>{sortLabel}</Text>
       </Pressable>
-      <Pressable onPress={() => refreshLeague(leagueId)}>
-        <Text onPress={() => refreshLeague(leagueId)}>Refresh</Text>
+      <Pressable onPress={onRefresh}>
+        <Text>Refresh</Text>
       </Pressable>
+      <Pressable
+        onPress={() =>
+          setLineup(leagueId)
+            .then(() => onReload?.())
+            .catch((err) => setBoardError(err.body?.error || "Lineup failed"))
+        }
+      >
+        <Text>Set lineup on ESPN</Text>
+      </Pressable>
+      {boardError ? (
+        <View>
+          <Text>{boardError}</Text>
+          <Pressable onPress={loadBoard}>
+            <Text>Retry</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {fetchedAt ? <Text>{fetchedAt}</Text> : null}
-      {boardError ? <Text>{boardError}</Text> : null}
-      {workshop ? (
-        <Workshop trade={workshop} onClear={clearSelection} />
+      {showWorkshop ? (
+        <Workshop
+          trade={workshop}
+          onClear={clearSelection}
+          clearLabel="Clear selection"
+          leagueId={leagueId}
+          onReload={onReload}
+        />
       ) : null}
       {visibleTeams.map((team) => (
         <TeamCard
@@ -297,9 +333,32 @@ export default function LeagueBoard({ leagueId }) {
       ))}
       <View>
         <Text>Waivers</Text>
+        {suggested ? (
+          <View>
+            <Text>
+              Add {suggested.add.name}, drop {suggested.drop.name}
+            </Text>
+            <Pressable
+              onPress={() =>
+                claimWaiver(leagueId, suggested.add.id, suggested.drop.id)
+                  .then(() => onReload?.())
+                  .catch((err) => setBoardError(err.body?.error || "Claim failed"))
+              }
+            >
+              <Text>File waiver on ESPN</Text>
+            </Pressable>
+          </View>
+        ) : null}
         {waivers.length ? (
           waivers.map((player) => (
-            <Text key={String(player.id)}>{player.name}</Text>
+            <View key={String(player.id)}>
+              <Text>{player.name}</Text>
+              <Text>
+                {player.position} {player.projectedPts} {player.deltaVsWorstStarter}
+                {player.beatsStarter ? " beats starter" : ""}
+                {player.streamer ? " streamer" : ""}
+              </Text>
+            </View>
           ))
         ) : (
           <Text>No free agents.</Text>
@@ -363,9 +422,6 @@ const styles = StyleSheet.create({
     color: "#3f3f46",
     fontWeight: "600",
   },
-  table: {
-    overflow: "auto",
-  },
   playerRow: {
     flexDirection: "row",
     paddingVertical: 6,
@@ -405,15 +461,5 @@ const styles = StyleSheet.create({
   empty: {
     padding: 16,
     color: "#52525b",
-  },
-  workshop: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e4e4e7",
-  },
-  workshopTitle: {
-    fontWeight: "700",
   },
 });

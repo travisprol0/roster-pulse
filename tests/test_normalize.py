@@ -92,4 +92,4 @@ def test_starter_slots_from_lineup_slot_counts():
     slots = starter_slots(
         {"lineupSlotCounts": {"0": 1, "2": 2, "4": 2, "6": 1, "23": 1, "20": 7}}
     )
-    assert slots == {"QB": 1, "RB": 2, "WR": 2, "TE": 1}
+    assert slots == {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1}

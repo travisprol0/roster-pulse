@@ -1,8 +1,9 @@
 from unittest.mock import patch
+import json
 
 import pytest
 
-from espn.client import EspnFantasyClient, EspnUnauthorizedError
+from espn.client import EspnFantasyClient, EspnUnauthorizedError, EspnWriteError
 
 ESPN_S2 = "s2-token"
 SWID = "{TEST-SWID}"
@@ -45,6 +46,16 @@ def test_raises_on_401_unauthorized(mock_get):
 
     with pytest.raises(EspnUnauthorizedError):
         _client().fetch_settings()
+
+
+@patch("espn.client.requests.get")
+def test_raises_write_error_on_get_400(mock_get):
+    mock_get.return_value.status_code = 400
+    mock_get.return_value.text = "invalid league"
+
+    with pytest.raises(EspnWriteError) as err:
+        _client().fetch_settings()
+    assert err.value.status == 400
 
 
 @patch("espn.client.requests.get")
@@ -93,3 +104,11 @@ def test_deserializes_kona_player_info_json_to_dict(mock_get):
 
     assert result == payload
     assert mock_get.call_args.kwargs["params"]["view"] == "kona_player_info"
+    players_filter = json.loads(
+        mock_get.call_args.kwargs["headers"]["X-Fantasy-Filter"]
+    )["players"]
+    assert players_filter["limit"] == 50
+    assert players_filter["sortPercOwned"] == {
+        "sortPriority": 1,
+        "sortAsc": False,
+    }

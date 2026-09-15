@@ -88,7 +88,7 @@ def _seed_league(league_id=LEAGUE_ID, name="Test League"):
     return account
 
 
-def _settings_and_roster_get(url, params=None, headers=None):
+def _settings_and_roster_get(url, params=None, headers=None, **_kwargs):
     from unittest.mock import MagicMock
 
     response = MagicMock()
@@ -180,6 +180,29 @@ def test_post_credentials_400_when_no_complete_rows(client):
         content_type="application/json",
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@patch("espn.client.requests.get")
+def test_post_credentials_espn_http_error_is_json_with_cors(mock_get, client):
+    mock_get.return_value.status_code = 400
+    mock_get.return_value.text = "invalid league"
+    response = client.post(
+        "/api/espn-credentials/",
+        data=json.dumps(
+            {
+                "season": SEASON,
+                "leagues": [
+                    {"leagueId": str(LEAGUE_ID), "espn_s2": ESPN_S2, "swid": SWID},
+                ],
+            }
+        ),
+        content_type="application/json",
+        HTTP_ORIGIN="http://localhost:8081",
+    )
+    assert response.status_code == 400
+    assert response["Access-Control-Allow-Origin"] == "*"
+    assert response.json()["error"]
 
 
 @pytest.mark.django_db
@@ -399,7 +422,7 @@ def _kona_entry(pid, name, position_id, projected, on_team_id=0):
     }
 
 
-def _settings_roster_and_waivers_get(url, params=None, headers=None):
+def _settings_roster_and_waivers_get(url, params=None, headers=None, **_kwargs):
     from unittest.mock import MagicMock
 
     view = (params or {}).get("view")

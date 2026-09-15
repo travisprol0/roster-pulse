@@ -4,6 +4,7 @@ import { fetchTrades } from "../api/trades";
 
 test("fetchTrades includes league_id query param", async () => {
   global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
     json: async () => ({ trades: [] }),
   });
 
@@ -16,6 +17,7 @@ test("fetchTrades includes league_id query param", async () => {
 
 test("refreshLeague POSTs league_id to /api/league/refresh/", async () => {
   global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
     json: async () => ({ fetchedAt: "2026-09-15T12:00:00Z" }),
   });
 

@@ -3,22 +3,30 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from engine.lineup import recommended_starter_ids
+from engine.lineup import fill_starters, recommended_starter_ids
 from engine.trade import find_trades, score_trade
-from espn.client import EspnFantasyClient, EspnUnauthorizedError
+from engine.waivers import flag_bye_week_streamers
+from espn.client import (
+    EspnFantasyClient,
+    EspnRateLimitedError,
+    EspnTimeoutError,
+    EspnUnauthorizedError,
+    EspnWriteError,
+)
 from espn.normalize import starter_slots, user_team
 from leagues.models import EspnAccount, LeagueSettings, RosterSnapshot
 from leagues.sync import sync_league
 
 DEFAULT_SEASON = 2026
 PTS_SCORING = {"pts": 1.0}
-SKILL_POSITIONS = {"QB", "RB", "WR", "TE"}
+SKILL_POSITIONS = {"QB", "RB", "WR", "TE", "K", "DST"}
+SURPLUS_POSITIONS = {"QB", "RB", "WR", "TE", "K", "DST"}
 
 
 def _cors(response):
     response["Access-Control-Allow-Origin"] = "*"
     response["Access-Control-Allow-Headers"] = "Content-Type"
-    response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
     return response
 
 
@@ -27,7 +35,7 @@ def _json(data, status=200):
 
 
 def health(_request):
-    return JsonResponse({"status": "ok"})
+    return _cors(JsonResponse({"status": "ok"}))
 
 
 def _complete_league(row):
@@ -41,51 +49,25 @@ def _complete_league(row):
 
 @csrf_exempt
 def espn_credentials(request):
-    def _dbg(message, data, hid="E"):
-        import time
-        try:
-            with open(
-                "/home/travis-prol/Documents/projects/roster-pulse/.cursor/debug-1de000.log",
-                "a",
-                encoding="utf-8",
-            ) as handle:
-                handle.write(
-                    json.dumps(
-                        {
-                            "sessionId": "1de000",
-                            "hypothesisId": hid,
-                            "location": "config/views.py:espn_credentials",
-                            "message": message,
-                            "data": data,
-                            "timestamp": int(time.time() * 1000),
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-
     if request.method == "OPTIONS":
-        _dbg("OPTIONS", {"path": request.path})
         return _json({})
     if request.method != "POST":
-        _dbg("method not POST", {"method": request.method})
         return _json({"error": "method not allowed"}, status=405)
 
-    body = json.loads(request.body or b"{}")
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return _json({"error": "invalid json"}, status=400)
     rows = body.get("leagues") or []
     complete = [row for row in (_complete_league(r) for r in rows) if row]
-    _dbg(
-        "POST parsed",
-        {
-            "rowCount": len(rows),
-            "completeCount": len(complete),
-            "leagueIdLens": [len(str(r.get("leagueId") or "").strip()) for r in rows],
-        },
-    )
     season = body.get("season") or DEFAULT_SEASON
+    try:
+        season = int(season)
+    except (TypeError, ValueError):
+        return _json({"error": "invalid season"}, status=400)
+    if season < 2000 or season > 2100:
+        return _json({"error": "invalid season"}, status=400)
     if not complete:
-        _dbg("400 no complete leagues", {})
         return _json({"error": "no complete leagues"}, status=400)
 
     results = []
@@ -94,7 +76,6 @@ def espn_credentials(request):
         try:
             sync_league(client)
         except EspnUnauthorizedError:
-            _dbg("unauthorized", {"leagueId": row["leagueId"]})
             results.append(
                 {
                     "league_id": row["leagueId"],
@@ -103,11 +84,13 @@ def espn_credentials(request):
                 }
             )
             continue
-        except Exception as err:
-            _dbg("sync exception", {"type": type(err).__name__, "text": str(err)[:200]})
-            raise
+        except EspnRateLimitedError:
+            return _json({"error": "ESPN rate limited"}, status=429)
+        except EspnTimeoutError:
+            return _json({"error": "ESPN timed out"}, status=504)
+        except EspnWriteError as err:
+            return _json({"error": str(err) or "ESPN request failed"}, status=err.status)
         account = EspnAccount.objects.get(espn_s2=row["espn_s2"], swid=row["swid"])
-        _dbg("sync ok", {"leagueId": row["leagueId"], "accountId": account.id})
         results.append(
             {
                 "league_id": row["leagueId"],
@@ -122,6 +105,20 @@ def espn_credentials(request):
 def leagues(request):
     if request.method == "OPTIONS":
         return _json({})
+    if request.method == "DELETE":
+        league_id = request.GET.get("league_id")
+        if not league_id:
+            return _json({"error": "not found"}, status=404)
+        settings = LeagueSettings.objects.filter(espn_league_id=int(league_id))
+        if not settings.exists():
+            return _json({"error": "not found"}, status=404)
+        accounts = {row.account_id for row in settings.select_related("account")}
+        RosterSnapshot.objects.filter(espn_league_id=int(league_id)).delete()
+        settings.delete()
+        for account_id in accounts:
+            if not LeagueSettings.objects.filter(account_id=account_id).exists():
+                EspnAccount.objects.filter(id=account_id).delete()
+        return _json({"ok": True})
     data = [
         {"id": str(row.espn_league_id), "name": row.name}
         for row in LeagueSettings.objects.order_by("espn_league_id")
@@ -197,6 +194,8 @@ def _surplus_need(teams, slots):
     for team in teams:
         tags = []
         for position, depth in slots.items():
+            if position not in SURPLUS_POSITIONS:
+                continue
             scores = [
                 _position_score(other.get("players") or [], position, depth) for other in teams
             ]
@@ -306,7 +305,14 @@ def league_refresh(request):
     client = EspnFantasyClient(
         account.espn_s2, account.swid, int(league_id), settings.season
     )
-    sync_league(client)
+    try:
+        sync_league(client)
+    except EspnUnauthorizedError:
+        return _json({"error": "unauthorized"}, status=401)
+    except EspnRateLimitedError:
+        return _json({"error": "ESPN rate limited"}, status=429)
+    except EspnTimeoutError:
+        return _json({"error": "ESPN timed out"}, status=504)
     snapshot = _snapshot(league_id)
     return _json({"fetchedAt": snapshot.fetched_at})
 
@@ -326,18 +332,28 @@ def waivers(request):
     ).first()
     slots = starter_slots(settings.roster_sizes if settings else {})
     mine = user_team(snapshot.teams, snapshot.account.swid)
-    starter_ids = (
-        recommended_starter_ids(mine.get("players") or [], slots) if mine else set()
-    )
+    if not mine:
+        return _json({"waivers": [], "error": "cookies did not match a team"})
+    starter_ids = recommended_starter_ids(mine.get("players") or [], slots)
     worst = {}
-    for player in (mine.get("players") if mine else []) or []:
+    worst_player = {}
+    for player in mine.get("players") or []:
         if player.get("id") not in starter_ids:
             continue
         position = player.get("position")
         pts = player.get("projectedPts") or 0
         if position not in worst or pts < worst[position]:
             worst[position] = pts
+            worst_player[position] = player
     waivers = []
+    current_week = settings.current_week if settings else 1
+    streamers = flag_bye_week_streamers(
+        mine.get("players") or [],
+        snapshot.free_agents or [],
+        current_week,
+        slots,
+    )
+    streamer_ids = {str(player.get("id")) for player in streamers}
     for player in snapshot.free_agents or []:
         pts = player.get("projectedPts") or 0
         baseline = worst.get(player.get("position"), 0)
@@ -350,9 +366,25 @@ def waivers(request):
                 "projectedPts": pts,
                 "beatsStarter": delta > 0,
                 "deltaVsWorstStarter": delta,
+                "streamer": str(player.get("id")) in streamer_ids,
             }
         )
-    return _json({"waivers": waivers})
+    waivers.sort(key=lambda row: row["deltaVsWorstStarter"], reverse=True)
+    suggested = None
+    for row in waivers:
+        if row["beatsStarter"]:
+            drop = worst_player.get(row["position"])
+            if drop:
+                suggested = {
+                    "add": {"id": row["id"], "name": row["name"], "position": row["position"]},
+                    "drop": {
+                        "id": drop.get("id"),
+                        "name": drop.get("name") or "",
+                        "position": drop.get("position") or "",
+                    },
+                }
+            break
+    return _json({"waivers": waivers, "suggested": suggested})
 
 
 @csrf_exempt
@@ -380,7 +412,7 @@ def trades(request):
     slots = starter_slots(settings.roster_sizes if settings else {})
     mine = user_team(snapshot.teams, snapshot.account.swid)
     if not mine:
-        return _json({"trades": []})
+        return _json({"trades": [], "error": "cookies did not match a team"})
     mine_players = [p for p in mine["players"] if p.get("position") in SKILL_POSITIONS]
     others = [
         {
@@ -401,14 +433,32 @@ def _player_by_id(players, player_id):
     return None
 
 
+def _split_ids(value):
+    if not value:
+        return []
+    return [part for part in str(value).replace(",", "+").split("+") if part]
+
+
+def _players_by_ids(players, ids):
+    found = []
+    for player_id in ids:
+        player = _player_by_id(players, player_id)
+        if not player:
+            return None
+        found.append(player)
+    return found
+
+
 @csrf_exempt
 def evaluate(request):
     if request.method == "OPTIONS":
         return _json({})
     league_id = request.GET.get("league_id")
-    send_id = request.GET.get("send_id")
-    receive_id = request.GET.get("receive_id")
-    if not league_id or not send_id or not receive_id:
+    send_ids = _split_ids(request.GET.get("send_ids") or request.GET.get("send_id"))
+    receive_ids = _split_ids(
+        request.GET.get("receive_ids") or request.GET.get("receive_id")
+    )
+    if not league_id or not send_ids or not receive_ids:
         return _json({"error": "invalid players"}, status=400)
 
     snapshot = _snapshot(league_id)
@@ -423,34 +473,34 @@ def evaluate(request):
     if not mine:
         return _json({"error": "invalid players"}, status=400)
 
-    send = _player_by_id(mine.get("players"), send_id)
+    sends = _players_by_ids(mine.get("players"), send_ids)
     receive = None
     other = None
     for team in snapshot.teams:
         if team.get("id") == mine.get("id"):
             continue
-        found = _player_by_id(team.get("players"), receive_id)
+        found = _players_by_ids(team.get("players"), receive_ids)
         if found:
             receive = found
             other = team
             break
-    if not send or not receive:
+    if not sends or not receive:
         return _json({"error": "invalid players"}, status=400)
 
     scored = score_trade(
         mine.get("players") or [],
         other.get("players") or [],
-        [send],
-        [receive],
+        sends,
+        receive,
         PTS_SCORING,
         slots,
     )
     return _json(
         {
-            "send": send.get("name"),
-            "receive": receive.get("name"),
-            "sendId": send.get("id"),
-            "receiveId": receive.get("id"),
+            "send": " + ".join(player.get("name") or "" for player in sends),
+            "receive": " + ".join(player.get("name") or "" for player in receive),
+            "sendId": "+".join(str(player.get("id")) for player in sends),
+            "receiveId": "+".join(str(player.get("id")) for player in receive),
             "teamBId": other.get("id"),
             "teamBName": other.get("name"),
             "teamADelta": scored["team_a_delta"],
@@ -462,3 +512,107 @@ def evaluate(request):
             "mutual": scored["team_a_delta"] > 0 and scored["team_b_delta"] > 0,
         }
     )
+
+
+def _league_client(league_id):
+    settings = (
+        LeagueSettings.objects.filter(espn_league_id=int(league_id))
+        .order_by("-season")
+        .select_related("account")
+        .first()
+    )
+    if not settings:
+        return None, None
+    account = settings.account
+    client = EspnFantasyClient(
+        account.espn_s2, account.swid, int(league_id), settings.season
+    )
+    return client, settings
+
+
+def _write_caught(fn):
+    try:
+        return fn(), None
+    except EspnUnauthorizedError:
+        return None, _json({"error": "unauthorized"}, status=401)
+    except EspnRateLimitedError:
+        return None, _json({"error": "ESPN rate limited"}, status=429)
+    except EspnTimeoutError:
+        return None, _json({"error": "ESPN timed out"}, status=504)
+    except EspnWriteError as err:
+        return None, _json({"error": str(err)}, status=err.status)
+
+
+@csrf_exempt
+def lineup_set(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    if request.method != "POST":
+        return _json({"error": "method not allowed"}, status=405)
+    body = json.loads(request.body or b"{}")
+    league_id = body.get("league_id")
+    if not league_id:
+        return _json({"error": "not found"}, status=404)
+    client, settings = _league_client(league_id)
+    if not client:
+        return _json({"error": "not found"}, status=404)
+    snapshot = _snapshot(league_id)
+    if not snapshot:
+        return _json({"error": "not found"}, status=404)
+    mine = user_team(snapshot.teams, snapshot.account.swid)
+    if not mine:
+        return _json({"error": "cookies did not match a team"}, status=400)
+    slots = starter_slots(settings.roster_sizes if settings else {})
+    starters = fill_starters(mine.get("players") or [], slots)
+    result, error = _write_caught(
+        lambda: client.set_lineup(
+            [{"playerId": player.get("id"), "slot": player.get("slot")} for player in starters]
+        )
+    )
+    if error:
+        return error
+    return _json({"ok": True, "result": result})
+
+
+@csrf_exempt
+def waiver_claim(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    if request.method != "POST":
+        return _json({"error": "method not allowed"}, status=405)
+    body = json.loads(request.body or b"{}")
+    league_id = body.get("league_id")
+    add_id = body.get("add_id")
+    drop_id = body.get("drop_id")
+    if not league_id or add_id is None or drop_id is None:
+        return _json({"error": "invalid players"}, status=400)
+    client, _settings = _league_client(league_id)
+    if not client:
+        return _json({"error": "not found"}, status=404)
+    result, error = _write_caught(lambda: client.claim_waiver(add_id, drop_id))
+    if error:
+        return error
+    return _json({"ok": True, "result": result})
+
+
+@csrf_exempt
+def trade_propose(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    if request.method != "POST":
+        return _json({"error": "method not allowed"}, status=405)
+    body = json.loads(request.body or b"{}")
+    league_id = body.get("league_id")
+    send_ids = body.get("send_ids") or []
+    receive_ids = body.get("receive_ids") or []
+    if not league_id or not send_ids or not receive_ids:
+        return _json({"error": "invalid players"}, status=400)
+    client, _settings = _league_client(league_id)
+    if not client:
+        return _json({"error": "not found"}, status=404)
+    result, error = _write_caught(
+        lambda: client.propose_trade(send_ids, receive_ids)
+    )
+    if error:
+        return error
+    return _json({"ok": True, "result": result})

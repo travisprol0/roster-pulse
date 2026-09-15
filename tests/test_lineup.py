@@ -14,6 +14,15 @@ def test_recommended_starters_sits_weak_te_when_better_exists():
     assert "weak" not in ids
 
 
+def test_recommended_starters_skips_ir_slot():
+    players = [
+        {"id": "ir", "position": "RB", "projectedPts": 99, "injury": "", "slot": "IR"},
+        {"id": "rb", "position": "RB", "projectedPts": 5, "injury": "", "slot": "RB"},
+    ]
+    ids = recommended_starter_ids(players, {"RB": 1})
+    assert ids == {"rb"}
+
+
 def test_recommended_starters_top_projected_at_each_slot():
     players = [
         {"id": "qb", "position": "QB", "projectedPts": 200},

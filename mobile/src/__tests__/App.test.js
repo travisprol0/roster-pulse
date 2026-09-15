@@ -9,15 +9,18 @@ import { isDesktopWidth } from "../layout";
 import { useWindowWidth } from "../useWindowWidth";
 
 jest.mock("../api/espnCredentials", () => ({
-  saveEspnCredentials: jest.fn(() => Promise.resolve()),
+  saveEspnCredentials: jest.fn(() => Promise.resolve({ leagues: [{ status: "ok" }] })),
 }));
 
 jest.mock("../api/league", () => ({
   fetchLeague: jest.fn(),
+  refreshLeague: jest.fn(() => Promise.resolve({ fetchedAt: "" })),
+  setLineup: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock("../api/leagues", () => ({
   fetchLeagues: jest.fn(),
+  deleteLeague: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock("../api/trades", () => ({
@@ -26,6 +29,12 @@ jest.mock("../api/trades", () => ({
 
 jest.mock("../api/waivers", () => ({
   fetchWaivers: jest.fn(() => Promise.resolve({ waivers: [] })),
+  claimWaiver: jest.fn(() => Promise.resolve({ ok: true })),
+}));
+
+jest.mock("../api/evaluate", () => ({
+  fetchEvaluate: jest.fn(),
+  proposeTrade: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock("../useWindowWidth", () => ({

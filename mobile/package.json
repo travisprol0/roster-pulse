@@ -5,6 +5,8 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.0",
     "expo": "~57.0.22",
+    "expo-clipboard": "~8.0.8",
+    "expo-constants": "~18.0.13",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -22,10 +24,23 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "bash scripts/expo-web.sh",
-    "test": "jest"
+    "test": "jest --coverage"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "collectCoverageFrom": [
+      "App.js",
+      "src/**/*.{js,jsx}",
+      "!src/**/__tests__/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "html",
+      "json",
+      "lcov"
+    ]
   },
   "private": true
 }

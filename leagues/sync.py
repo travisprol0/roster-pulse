@@ -10,6 +10,18 @@ def _account(client):
     return account
 
 
+def _team_name(row):
+    name = str(row.get("name") or "").strip()
+    if name:
+        return name
+    combined = " ".join(
+        part for part in (row.get("location"), row.get("nickname")) if part
+    ).strip()
+    if combined:
+        return combined
+    return str(row.get("abbrev") or "").strip()
+
+
 def _merge_team_standings(teams, team_payload):
     meta = {row.get("id"): row for row in (team_payload or {}).get("teams") or []}
     for team in teams:
@@ -24,6 +36,15 @@ def _merge_team_standings(teams, team_payload):
         team["pointsAgainst"] = overall.get("pointsAgainst") or 0
         team["playoffSeed"] = extra.get("playoffSeed")
         team["waiverRank"] = extra.get("waiverRank")
+        if extra.get("primaryOwner"):
+            team["primaryOwner"] = extra["primaryOwner"]
+        elif not team.get("primaryOwner"):
+            owners = extra.get("owners") or []
+            if owners:
+                team["primaryOwner"] = owners[0]
+        name = _team_name(extra) or _team_name(team)
+        if name:
+            team["name"] = name
     return teams
 
 
@@ -38,6 +59,7 @@ def sync_league_settings(client):
             "name": settings["name"],
             "scoring_rules": settings["scoringSettings"],
             "roster_sizes": settings["rosterSettings"],
+            "current_week": (payload.get("status") or {}).get("currentMatchupPeriod") or 1,
         },
     )
 

@@ -1,21 +1,31 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { saveEspnCredentials } from "../api/espnCredentials";
+import { deleteLeague } from "../api/leagues";
 
 function emptyLeague() {
   return { leagueId: "", espn_s2: "", swid: "" };
 }
 
+function fromSaved(savedLeagues) {
+  if (!savedLeagues.length) {
+    return [emptyLeague()];
+  }
+  return savedLeagues.map((league) => ({
+    leagueId: String(league.id),
+    espn_s2: "",
+    swid: "",
+  }));
+}
+
 export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
-  const [leagues, setLeagues] = useState([emptyLeague()]);
+  const [leagues, setLeagues] = useState(() => fromSaved(savedLeagues));
   const [expanded, setExpanded] = useState(savedLeagues.length === 0);
   const [syncError, setSyncError] = useState("");
+  const [syncOk, setSyncOk] = useState("");
   const [season, setSeason] = useState("2026");
-
-  useEffect(() => {
-    setExpanded(savedLeagues.length === 0);
-  }, [savedLeagues]);
+  const [busy, setBusy] = useState(false);
 
   function toggleExpanded() {
     setExpanded((current) => !current);
@@ -27,90 +37,76 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
     );
   }
 
-  function onSubmit() {
-    // #region agent log
-    fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "1de000",
-      },
-      body: JSON.stringify({
-        sessionId: "1de000",
-        hypothesisId: "A",
-        location: "SettingsScreen.js:onSubmit",
-        message: "submit pressed",
-        data: {
-          expanded,
-          rowCount: leagues.length,
-          fields: leagues.map((row) => ({
-            leagueIdLen: (row.leagueId || "").trim().length,
-            espnLen: (row.espn_s2 || "").trim().length,
-            swidLen: (row.swid || "").trim().length,
-          })),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    saveEspnCredentials({ leagues, season: Number(season) || 2026 })
-      .then(async (response) => {
-        // #region agent log
-        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "1de000",
-          },
-          body: JSON.stringify({
-            sessionId: "1de000",
-            hypothesisId: "B",
-            location: "SettingsScreen.js:onSubmit.then",
-            message: "saveEspnCredentials settled",
-            data: { ok: response?.ok, status: response?.status },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-        let body = {};
-        if (typeof response?.json === "function") {
-          body = await response.json();
-        }
-        const unauthorized = (body.leagues || []).some(
-          (row) => row.status === "unauthorized"
-        );
-        setSyncError(unauthorized ? "Could not sync: unauthorized" : "");
+  function onRemove(index) {
+    const row = leagues[index];
+    const saved = savedLeagues.some((league) => String(league.id) === String(row.leagueId));
+    const next = leagues.filter((_, i) => i !== index);
+    const finish = () => {
+      setLeagues(next.length ? next : [emptyLeague()]);
+      if (saved) {
         onSaved?.();
+      }
+    };
+    if (saved && row.leagueId) {
+      deleteLeague(row.leagueId)
+        .then(finish)
+        .catch(() => setSyncError("Could not delete league"));
+      return;
+    }
+    finish();
+  }
+
+  function onSubmit() {
+    const seasonNum = Number(season);
+    if (!Number.isInteger(seasonNum) || seasonNum < 2000 || seasonNum > 2100) {
+      setSyncError("Invalid season");
+      setSyncOk("");
+      return;
+    }
+    const incomplete = leagues.some(
+      (row) =>
+        !(row.leagueId || "").trim() || !(row.espn_s2 || "").trim() || !(row.swid || "").trim()
+    );
+    if (incomplete) {
+      setSyncError("Each league needs ID, espn_s2, and SWID");
+      setSyncOk("");
+      return;
+    }
+    setBusy(true);
+    saveEspnCredentials({ leagues, season: seasonNum })
+      .then((body) => {
+        const rows = body.leagues || [];
+        const unauthorized = rows.filter((row) => row.status === "unauthorized");
+        const okRows = rows.filter((row) => row.status === "ok");
+        if (unauthorized.length && !okRows.length) {
+          setSyncError("Could not sync: unauthorized");
+          setSyncOk("");
+          return;
+        }
+        if (unauthorized.length) {
+          setSyncError("Could not sync: unauthorized");
+        } else {
+          setSyncError("");
+        }
+        setSyncOk(okRows.length ? "Synced" : "");
+        if (okRows.length) {
+          onSaved?.();
+        }
       })
       .catch((err) => {
-        // #region agent log
-        fetch("http://127.0.0.1:7257/ingest/09ed06f5-2a1a-412c-960f-6f6e174b9c44", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "1de000",
-          },
-          body: JSON.stringify({
-            sessionId: "1de000",
-            hypothesisId: "B",
-            location: "SettingsScreen.js:onSubmit.catch",
-            message: "saveEspnCredentials rejected",
-            data: { name: err?.name, text: String(err) },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-      });
+        setSyncOk("");
+        setSyncError(err.body?.error || "Could not sync");
+      })
+      .finally(() => setBusy(false));
   }
 
   return (
     <View style={styles.content}>
       <Pressable onPress={toggleExpanded}>
-        <Text onPress={toggleExpanded} style={styles.header}>
-          Leagues / cookies
-        </Text>
+        <Text style={styles.header}>Leagues / cookies</Text>
       </Pressable>
       {syncError ? <Text>{syncError}</Text> : null}
+      {syncOk ? <Text>{syncOk}</Text> : null}
       {expanded ? (
         <>
           <Text style={styles.label}>Season</Text>
@@ -121,6 +117,9 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
             keyboardType="number-pad"
             style={styles.input}
           />
+          <Text style={styles.hint}>
+            Stored cookies are reused until you paste new espn_s2 and SWID.
+          </Text>
           {leagues.map((league, index) => (
             <View key={index} style={styles.block}>
               <Text style={styles.heading}>League {index + 1}</Text>
@@ -150,14 +149,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
                 secureTextEntry
                 style={styles.input}
               />
-              {leagues.length > 1 ? (
-                <Button
-                  title="Remove league"
-                  onPress={() =>
-                    setLeagues((current) => current.filter((_, i) => i !== index))
-                  }
-                />
-              ) : null}
+              <Button title="Remove league" onPress={() => onRemove(index)} />
             </View>
           ))}
           <View style={styles.actions}>
@@ -165,7 +157,7 @@ export default function SettingsScreen({ onSaved, savedLeagues = [] }) {
               title="Add league"
               onPress={() => setLeagues((current) => [...current, emptyLeague()])}
             />
-            <Button title="Submit" onPress={onSubmit} />
+            <Button title="Submit" onPress={onSubmit} disabled={busy} />
           </View>
         </>
       ) : null}
@@ -183,6 +175,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 8,
+  },
+  hint: {
+    color: "#52525b",
+    marginBottom: 12,
   },
   block: {
     marginBottom: 16,

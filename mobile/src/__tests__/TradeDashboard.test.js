@@ -8,6 +8,10 @@ jest.mock("../api/trades", () => ({
   fetchTrades: jest.fn(),
 }));
 
+jest.mock("../api/evaluate", () => ({
+  proposeTrade: jest.fn(() => Promise.resolve({ ok: true })),
+}));
+
 jest.mock(
   "../clipboard",
   () => ({
