@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague, refreshLeague } from "../api/league";
+import { fetchWaivers } from "../api/waivers";
 import { copyText } from "../clipboard";
 import LeagueBoard from "../screens/LeagueBoard";
 
@@ -12,6 +13,10 @@ jest.mock("../api/league", () => ({
 
 jest.mock("../api/evaluate", () => ({
   fetchEvaluate: jest.fn(),
+}));
+
+jest.mock("../api/waivers", () => ({
+  fetchWaivers: jest.fn(() => Promise.resolve({ waivers: [] })),
 }));
 
 jest.mock(
@@ -386,4 +391,31 @@ test("injured starter row is marked and healthy row is not", async () => {
   expect(getByTestId("injury-starter-a-te")).toBeTruthy();
   expect(queryByTestId("injury-starter-a-rb3")).toBeNull();
   expect(queryByTestId("injury-starter-a-rb-sit")).toBeNull();
+});
+
+test("wire list shows a free agent name", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchWaivers.mockResolvedValueOnce({
+    waivers: [
+      {
+        id: "fa-te",
+        name: "FA TE",
+        position: "TE",
+        projectedPts: 100,
+        beatsStarter: true,
+        deltaVsWorstStarter: 80,
+      },
+    ],
+  });
+
+  const { findByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("FA TE")).toBeTruthy();
+});
+
+test("wire list shows empty copy when there are no free agents", async () => {
+  fetchLeague.mockResolvedValueOnce(board);
+  fetchWaivers.mockResolvedValueOnce({ waivers: [] });
+
+  const { findByText } = render(<LeagueBoard leagueId="12345" />);
+  expect(await findByText("No free agents.")).toBeTruthy();
 });

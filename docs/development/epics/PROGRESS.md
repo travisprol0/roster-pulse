@@ -24,8 +24,8 @@ Before closing epic tickets: follow [AGENT-CHECKLIST.md](AGENT-CHECKLIST.md).
 | **BOARD-001** | 4 | 0 | 0 | 4 |
 | **LINE-001** | 2 | 0 | 0 | 2 |
 | **SYNC-001** | 3 | 0 | 0 | 3 |
-| **WIRE-001** | 0 | 0 | 2 | 2 |
-| **All tickets** | 18 | 0 | 2 | 20 |
+| **WIRE-001** | 2 | 0 | 0 | 2 |
+| **All tickets** | 20 | 0 | 0 | 20 |
 
 Read-only league board and cookie submit sync exist in the app; they are **not** closed tickets. Notes on BOARD/SYNC call that out.
 
@@ -100,5 +100,5 @@ Source: [WIRE-001-waivers.md](WIRE-001-waivers.md)
 
 | Status | ID | Title | Notes |
 | ------ | -- | ----- | ----- |
-| Not started | WIRE-001-01 | Free-agent sync | — |
-| Not started | WIRE-001-02 | Ranked adds | — |
+| Done | WIRE-001-01 | Free-agent sync | `kona_player_info` → `free_agents`; `GET /api/waivers/`. |
+| Done | WIRE-001-02 | Ranked adds | `beatsStarter` / `deltaVsWorstStarter` on GET waivers; Board list. |

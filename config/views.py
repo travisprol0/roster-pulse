@@ -312,6 +312,50 @@ def league_refresh(request):
 
 
 @csrf_exempt
+def waivers(request):
+    if request.method == "OPTIONS":
+        return _json({})
+    league_id = request.GET.get("league_id")
+    if not league_id:
+        return _json({"waivers": []})
+    snapshot = _snapshot(league_id)
+    if not snapshot:
+        return _json({"waivers": []})
+    settings = LeagueSettings.objects.filter(
+        espn_league_id=int(league_id), season=snapshot.season
+    ).first()
+    slots = starter_slots(settings.roster_sizes if settings else {})
+    mine = user_team(snapshot.teams, snapshot.account.swid)
+    starter_ids = (
+        recommended_starter_ids(mine.get("players") or [], slots) if mine else set()
+    )
+    worst = {}
+    for player in (mine.get("players") if mine else []) or []:
+        if player.get("id") not in starter_ids:
+            continue
+        position = player.get("position")
+        pts = player.get("projectedPts") or 0
+        if position not in worst or pts < worst[position]:
+            worst[position] = pts
+    waivers = []
+    for player in snapshot.free_agents or []:
+        pts = player.get("projectedPts") or 0
+        baseline = worst.get(player.get("position"), 0)
+        delta = pts - baseline
+        waivers.append(
+            {
+                "id": player.get("id"),
+                "name": player.get("name") or "",
+                "position": player.get("position") or "",
+                "projectedPts": pts,
+                "beatsStarter": delta > 0,
+                "deltaVsWorstStarter": delta,
+            }
+        )
+    return _json({"waivers": waivers})
+
+
+@csrf_exempt
 def trades(request):
     if request.method == "OPTIONS":
         return _json({})

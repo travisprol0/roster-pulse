@@ -64,6 +64,27 @@ def normalize_roster_payload(payload):
     return teams, players
 
 
+def normalize_free_agents(payload, rostered_ids=None):
+    rostered = {str(pid) for pid in (rostered_ids or set())}
+    players = []
+    for row in payload.get("players") or []:
+        if row.get("onTeamId"):
+            continue
+        raw = row.get("player") or {}
+        entry = {
+            "playerId": row.get("id") or raw.get("id"),
+            "lineupSlotId": 20,
+            "playerPoolEntry": {"player": raw},
+        }
+        player = normalize_player(entry)
+        if not player:
+            continue
+        if str(player.get("id")) in rostered:
+            continue
+        players.append(player)
+    return players
+
+
 def user_team(teams, swid):
     for team in teams:
         if team.get("primaryOwner") == swid:

@@ -1,4 +1,4 @@
-from espn.normalize import normalize_roster_payload
+from espn.normalize import normalize_free_agents, normalize_roster_payload
 from leagues.models import EspnAccount, LeagueSettings, RosterSnapshot
 
 
@@ -57,6 +57,19 @@ def sync_roster(client):
     )
 
 
+def sync_free_agents(client):
+    payload = client.fetch_free_agents()
+    snapshot = RosterSnapshot.objects.filter(
+        espn_league_id=client.league_id, season=client.season
+    ).first()
+    if not snapshot:
+        return
+    rostered = {player.get("id") for player in snapshot.players}
+    snapshot.free_agents = normalize_free_agents(payload, rostered)
+    snapshot.save(update_fields=["free_agents", "fetched_at"])
+
+
 def sync_league(client):
     sync_league_settings(client)
     sync_roster(client)
+    sync_free_agents(client)

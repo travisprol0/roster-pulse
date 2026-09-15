@@ -13,13 +13,13 @@ Rank free agents who would beat your worst recommended starter at that position 
 
 ## Scope
 
-- [ ] API field or client: `beatsStarter`, `deltaVsWorstStarter`.
-- [ ] Simple list UI under the board (read-only; no ESPN claim).
+- [x] API field or client: `beatsStarter`, `deltaVsWorstStarter`.
+- [x] Simple list UI under the board (read-only; no ESPN claim).
 
 ## Acceptance criteria
 
-- [ ] Pytest: FA with 100 TE pts vs Weak TE 20 → positive delta for TE.
-- [ ] Jest: name appears in the wire list.
+- [x] Pytest: FA with 100 TE pts vs Weak TE 20 → positive delta for TE.
+- [x] Jest: name appears in the wire list.
 
 ## Pipeline (mandatory)
 

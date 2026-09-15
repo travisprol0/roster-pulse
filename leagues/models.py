@@ -38,6 +38,7 @@ class RosterSnapshot(models.Model):
     season = models.PositiveSmallIntegerField()
     teams = models.JSONField(default=list)
     players = models.JSONField(default=list)
+    free_agents = models.JSONField(default=list)
     fetched_at = models.DateTimeField(auto_now=True)
 
     class Meta:

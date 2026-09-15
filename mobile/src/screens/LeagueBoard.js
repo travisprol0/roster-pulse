@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 
 import { fetchEvaluate } from "../api/evaluate";
 import { fetchLeague, refreshLeague } from "../api/league";
+import { fetchWaivers } from "../api/waivers";
 import { copyText } from "../clipboard";
 
 function formatDelta(delta) {
@@ -172,6 +173,7 @@ export default function LeagueBoard({ leagueId }) {
   const [sort, setSort] = useState("slot");
   const [fetchedAt, setFetchedAt] = useState("");
   const [boardError, setBoardError] = useState("");
+  const [waivers, setWaivers] = useState([]);
 
   useEffect(() => {
     if (!leagueId) {
@@ -184,11 +186,12 @@ export default function LeagueBoard({ leagueId }) {
       setSort("slot");
       setFetchedAt("");
       setBoardError("");
+      setWaivers([]);
       return;
     }
     setLoading(true);
-    fetchLeague(leagueId)
-      .then((data) => {
+    Promise.all([fetchLeague(leagueId), fetchWaivers(leagueId)])
+      .then(([data, waiverData]) => {
         setTeams(data.teams || []);
         setYouPlayer(null);
         setThemPlayer(null);
@@ -197,6 +200,7 @@ export default function LeagueBoard({ leagueId }) {
         setSort("slot");
         setFetchedAt(data.fetchedAt || "");
         setBoardError(data.error || "");
+        setWaivers(waiverData.waivers || []);
         setLoading(false);
       })
       .catch(() => {
@@ -208,6 +212,7 @@ export default function LeagueBoard({ leagueId }) {
         setSort("slot");
         setFetchedAt("");
         setBoardError("");
+        setWaivers([]);
         setLoading(false);
       });
   }, [leagueId]);
@@ -290,6 +295,16 @@ export default function LeagueBoard({ leagueId }) {
           forceExpanded={Boolean(needle)}
         />
       ))}
+      <View>
+        <Text>Waivers</Text>
+        {waivers.length ? (
+          waivers.map((player) => (
+            <Text key={String(player.id)}>{player.name}</Text>
+          ))
+        ) : (
+          <Text>No free agents.</Text>
+        )}
+      </View>
     </View>
   );
 }

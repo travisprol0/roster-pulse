@@ -26,6 +26,9 @@ class EspnFantasyClient:
     def fetch_team(self):
         return self._get("mTeam")
 
+    def fetch_free_agents(self):
+        return self._get("kona_player_info")
+
     def _get(self, view):
         url = ESPN_LEAGUE_URL.format(season=self.season, league_id=self.league_id)
         response = requests.get(

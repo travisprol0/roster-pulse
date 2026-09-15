@@ -13,3 +13,18 @@
 {"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "unauthorized", "data": {"leagueId": 222}, "timestamp": 1789474078707}
 {"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 1, "completeCount": 0, "leagueIdLens": [0]}, "timestamp": 1789474078712}
 {"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "400 no complete leagues", "data": {}, "timestamp": 1789474078712}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 3, "completeCount": 2, "leagueIdLens": [5, 3, 0]}, "timestamp": 1789474782889}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "sync ok", "data": {"leagueId": 12345, "accountId": 1}, "timestamp": 1789474782899}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "unauthorized", "data": {"leagueId": 222}, "timestamp": 1789474782899}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 1, "completeCount": 0, "leagueIdLens": [0]}, "timestamp": 1789474782904}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "400 no complete leagues", "data": {}, "timestamp": 1789474782904}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 3, "completeCount": 2, "leagueIdLens": [5, 3, 0]}, "timestamp": 1789474903902}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "sync ok", "data": {"leagueId": 12345, "accountId": 1}, "timestamp": 1789474903910}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "unauthorized", "data": {"leagueId": 222}, "timestamp": 1789474903911}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 1, "completeCount": 0, "leagueIdLens": [0]}, "timestamp": 1789474903915}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "400 no complete leagues", "data": {}, "timestamp": 1789474903915}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 3, "completeCount": 2, "leagueIdLens": [5, 3, 0]}, "timestamp": 1789474948113}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "sync ok", "data": {"leagueId": 12345, "accountId": 1}, "timestamp": 1789474948122}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "unauthorized", "data": {"leagueId": 222}, "timestamp": 1789474948122}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "POST parsed", "data": {"rowCount": 1, "completeCount": 0, "leagueIdLens": [0]}, "timestamp": 1789474948127}
+{"sessionId": "1de000", "hypothesisId": "E", "location": "config/views.py:espn_credentials", "message": "400 no complete leagues", "data": {}, "timestamp": 1789474948127}

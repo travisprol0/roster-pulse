@@ -125,6 +125,8 @@ def _settings_and_roster_get(url, params=None, headers=None):
                 }
             ]
         }
+    elif view == "kona_player_info":
+        payload = {"players": []}
     else:
         payload = {
             "teams": [
@@ -381,3 +383,80 @@ def test_evaluate_endpoint_400_when_players_not_on_the_two_teams(client):
     assert missing.status_code == 400
     assert swapped.status_code == 400
     assert same_team.status_code == 400
+
+
+def _kona_entry(pid, name, position_id, projected, on_team_id=0):
+    return {
+        "id": pid,
+        "onTeamId": on_team_id,
+        "player": {
+            "id": pid,
+            "fullName": name,
+            "defaultPositionId": position_id,
+            "injuryStatus": "ACTIVE",
+            "stats": [{"statSourceId": 1, "appliedTotal": projected}],
+        },
+    }
+
+
+def _settings_roster_and_waivers_get(url, params=None, headers=None):
+    from unittest.mock import MagicMock
+
+    view = (params or {}).get("view")
+    if view == "kona_player_info":
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {
+            "players": [
+                _kona_entry("a-rb1", "RB1", 2, 120, on_team_id=1),
+                _kona_entry("fa-rb", "Free Agent RB", 2, 88.4),
+                _kona_entry("fa-te", "Free Agent TE", 4, 55.0),
+            ]
+        }
+        return response
+    return _settings_and_roster_get(url, params, headers)
+
+
+@pytest.mark.django_db
+@patch("espn.client.requests.get", side_effect=_settings_roster_and_waivers_get)
+def test_get_waivers_returns_unrostered_players_with_projected_pts(mock_get, client):
+    _seed_league()
+    refresh = client.post(
+        "/api/league/refresh/",
+        data=json.dumps({"league_id": LEAGUE_ID}),
+        content_type="application/json",
+    )
+    assert refresh.status_code == 200
+
+    response = client.get(f"/api/waivers/?league_id={LEAGUE_ID}")
+    assert response.status_code == 200
+    waivers = response.json()["waivers"]
+    by_id = {row["id"]: row for row in waivers}
+    assert "a-rb1" not in by_id
+    assert by_id["fa-rb"]["name"] == "Free Agent RB"
+    assert by_id["fa-rb"]["position"] == "RB"
+    assert by_id["fa-rb"]["projectedPts"] == 88.4
+    assert by_id["fa-te"]["name"] == "Free Agent TE"
+    assert by_id["fa-te"]["position"] == "TE"
+    assert by_id["fa-te"]["projectedPts"] == 55.0
+    assert mock_get.called
+
+
+@pytest.mark.django_db
+def test_get_waivers_empty_without_league_id(client):
+    response = client.get("/api/waivers/")
+    assert response.status_code == 200
+    assert response.json() == {"waivers": []}
+
+
+@pytest.mark.django_db
+def test_get_waivers_te_beats_worst_recommended_starter(client):
+    _seed_league()
+    snapshot = RosterSnapshot.objects.get()
+    snapshot.free_agents = [_player("fa-te", "FA TE", "TE", 100)]
+    snapshot.save()
+
+    response = client.get(f"/api/waivers/?league_id={LEAGUE_ID}")
+    row = next(item for item in response.json()["waivers"] if item["id"] == "fa-te")
+    assert row["beatsStarter"] is True
+    assert row["deltaVsWorstStarter"] == 80

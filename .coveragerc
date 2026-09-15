@@ -1,0 +1,8 @@
+[run]
+# Measure application code only. Exclude tests, migrations, and process entrypoints.
+omit =
+    tests/*
+    */migrations/*
+    manage.py
+    config/asgi.py
+    config/wsgi.py

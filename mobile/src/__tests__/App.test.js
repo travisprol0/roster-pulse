@@ -24,6 +24,10 @@ jest.mock("../api/trades", () => ({
   fetchTrades: jest.fn(),
 }));
 
+jest.mock("../api/waivers", () => ({
+  fetchWaivers: jest.fn(() => Promise.resolve({ waivers: [] })),
+}));
+
 jest.mock("../useWindowWidth", () => ({
   useWindowWidth: jest.fn(() => 400),
 }));

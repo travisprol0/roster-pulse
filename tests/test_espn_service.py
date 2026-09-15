@@ -81,3 +81,15 @@ def test_deserializes_mteam_json_to_dict(mock_get):
 
     assert result == payload
     assert mock_get.call_args.kwargs["params"]["view"] == "mTeam"
+
+
+@patch("espn.client.requests.get")
+def test_deserializes_kona_player_info_json_to_dict(mock_get):
+    payload = {"players": [{"id": 1, "onTeamId": 0}]}
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = payload
+
+    result = _client().fetch_free_agents()
+
+    assert result == payload
+    assert mock_get.call_args.kwargs["params"]["view"] == "kona_player_info"

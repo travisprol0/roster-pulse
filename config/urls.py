@@ -9,6 +9,7 @@ from config.views import (
     league_refresh,
     leagues,
     trades,
+    waivers,
 )
 
 urlpatterns = [
@@ -20,4 +21,5 @@ urlpatterns = [
     path("api/leagues/", leagues),
     path("api/league/refresh/", league_refresh),
     path("api/league/", league),
+    path("api/waivers/", waivers),
 ]

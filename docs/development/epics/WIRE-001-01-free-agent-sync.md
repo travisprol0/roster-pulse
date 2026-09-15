@@ -13,14 +13,16 @@ Fetch a free-agent (or full pool) view from ESPN, normalize like roster players,
 
 ## Scope
 
-- [ ] Lock the ESPN `view` name in this ticket when implementing; mock it in pytest.
-- [ ] Skip players already on a roster.
-- [ ] Positions at least QB/RB/WR/TE (+ K/DST if normalize already keeps them).
+- [x] Lock the ESPN `view` name in this ticket when implementing; mock it in pytest.
+- [x] Skip players already on a roster.
+- [x] Positions at least QB/RB/WR/TE (+ K/DST if normalize already keeps them).
+
+Locked ESPN view: **`kona_player_info`**. Persist on `RosterSnapshot.free_agents`.
 
 ## Acceptance criteria
 
-- [ ] Pytest: mocked payload → API list of unrostered players with projected pts.
-- [ ] No live ESPN.
+- [x] Pytest: mocked payload → API list of unrostered players with projected pts.
+- [x] No live ESPN.
 
 ## Pipeline (mandatory)
 
